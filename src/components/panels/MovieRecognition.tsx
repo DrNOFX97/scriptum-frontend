@@ -5,8 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
+import { API_BASE } from "@/lib/constants";
 
 interface Movie {
   id: number;

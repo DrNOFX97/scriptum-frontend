@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useFileContext } from "@/contexts/FileContext";
 import useFileUpload from "@/hooks/useFileUpload";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
+import { API_BASE } from "@/lib/constants";
 
 interface TranslateResponse {
   success: boolean;

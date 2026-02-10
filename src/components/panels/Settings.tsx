@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
+import { API_BASE } from "@/lib/constants";
 
 interface EnvConfig {
   OPENSUBTITLES_API_KEY: string;
