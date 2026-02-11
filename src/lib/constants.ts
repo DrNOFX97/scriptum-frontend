@@ -7,10 +7,10 @@
 // API Configuration
 // ============================================================================
 /**
- * API base URL - defaults to production Render backend
+ * API base URL - defaults to production GCP Cloud Run backend
  * For local development, set VITE_API_BASE_URL=http://localhost:5001 in .env.local
  */
-export const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://scriptum-api-xup6.onrender.com';
+export const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://scriptum-v2-5-315653817267.europe-west1.run.app';
 
 // ============================================================================
 // Processing Limits
