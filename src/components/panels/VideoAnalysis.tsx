@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useFileContext, type Subtitle } from "@/contexts/FileContext";
-import useFileUpload from "@/hooks/useFileUpload";
+import useLargeFileUpload from "@/hooks/useLargeFileUpload";
 import { parseSubtitleLanguage, getSubtitleBadges } from "@/lib/subtitleLanguages";
 
 import { API_BASE } from "@/lib/constants";
@@ -63,7 +63,7 @@ const VideoAnalysis = () => {
   const [processingOperation, setProcessingOperation] = useState<string>("");
   const videoRef = useRef<HTMLVideoElement>(null);
   const { toast } = useToast();
-  const { progress, isUploading, error, uploadFile } = useFileUpload();
+  const { progress, isUploading, error, uploadFile } = useLargeFileUpload();
   const {
     videoFile,
     setVideoFile,
@@ -211,29 +211,28 @@ const VideoAnalysis = () => {
       const url = URL.createObjectURL(file);
       setVideoUrl(url);
 
-      const result = await uploadFile<AnalyzeResponse>(
-        `${API_BASE}/analyze-video`,
-        file,
-        'video'
-      );
+      const result = await uploadFile<AnalyzeResponse>(file, (data) => {
+        console.log('✅ Upload e análise concluídos:', data);
+        setVideoInfo(data.video_info);
+        setCanRemux(data.can_remux_to_mp4);
+        setCanConvert(data.can_convert_to_mp4);
 
-      if (result && result.success) {
-        console.log('✅ Análise de vídeo concluída:', result);
-        setVideoInfo(result.video_info);
-        setCanRemux(result.can_remux_to_mp4);
-        setCanConvert(result.can_convert_to_mp4);
-
-        // Tentar reconhecer o filme automaticamente usando o filename correto
-        console.log('🔍 Iniciando reconhecimento TMDB com filename:', result.filename);
-        await recognizeMovie(result.filename);
+        // Set movie info if returned
+        if ((data as any).movie) {
+          setMovieInfo((data as any).movie);
+          console.log('🎬 Filme reconhecido:', (data as any).movie);
+        }
 
         toast({
           title: "Análise concluída!",
-          description: `${result.video_info.codec} • ${result.video_info.resolution} • ${result.video_info.duration_formatted}`,
+          description: data.video_info
+            ? `${data.video_info.codec} • ${data.video_info.resolution} • ${data.video_info.duration_formatted}`
+            : "Vídeo carregado com sucesso",
         });
-      } else {
-        console.error('❌ Análise falhou:', result);
-        throw new Error(result?.error || 'Análise falhou');
+      });
+
+      if (!result) {
+        throw new Error('Upload falhou');
       }
     } catch (err) {
       toast({
