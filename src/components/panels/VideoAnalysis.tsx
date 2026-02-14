@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useFileContext, type Subtitle } from "@/contexts/FileContext";
-import useLargeFileUpload from "@/hooks/useLargeFileUpload";
+import useVideoUpload from "@/hooks/useVideoUpload";
 import { parseSubtitleLanguage, getSubtitleBadges } from "@/lib/subtitleLanguages";
 
 import { API_BASE } from "@/lib/constants";
@@ -63,7 +63,7 @@ const VideoAnalysis = () => {
   const [processingOperation, setProcessingOperation] = useState<string>("");
   const videoRef = useRef<HTMLVideoElement>(null);
   const { toast } = useToast();
-  const { progress, isUploading, error, uploadFile } = useLargeFileUpload();
+  const { progress, isUploading, error, uploadVideo } = useVideoUpload();
   const {
     videoFile,
     setVideoFile,
@@ -211,7 +211,7 @@ const VideoAnalysis = () => {
       const url = URL.createObjectURL(file);
       setVideoUrl(url);
 
-      const result = await uploadFile<AnalyzeResponse>(file, (data) => {
+      const result = await uploadVideo<AnalyzeResponse>(file, (data) => {
         console.log('✅ Upload e análise concluídos:', data);
         setVideoInfo(data.video_info);
         setCanRemux(data.can_remux_to_mp4);
