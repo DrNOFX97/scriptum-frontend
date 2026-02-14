@@ -64,6 +64,7 @@ const VideoAnalysis = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const { toast } = useToast();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const {
     videoFile,
     setVideoFile,
@@ -203,6 +204,7 @@ const VideoAnalysis = () => {
   const analyzeVideo = async (file: File) => {
     try {
       setIsAnalyzing(true);
+      setError(null);
 
       toast({
         title: "Analisando vídeo localmente...",
@@ -230,10 +232,13 @@ const VideoAnalysis = () => {
       recognizeMovie(file.name);
 
     } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : "Falha ao analisar vídeo";
+      setError(errorMsg);
+
       toast({
         variant: "destructive",
         title: "Erro na análise",
-        description: err instanceof Error ? err.message : "Falha ao analisar vídeo",
+        description: errorMsg,
       });
     } finally {
       setIsAnalyzing(false);
