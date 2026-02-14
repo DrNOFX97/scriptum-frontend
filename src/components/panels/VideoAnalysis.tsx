@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useFileContext, type Subtitle } from "@/contexts/FileContext";
 import { parseSubtitleLanguage, getSubtitleBadges } from "@/lib/subtitleLanguages";
 import { analyzeVideoLocally } from "@/lib/videoAnalyzer";
+import { extractAllSubtitles } from "@/lib/subtitleExtractor";
 
 import { API_BASE } from "@/lib/constants";
 
@@ -356,33 +357,35 @@ const VideoAnalysis = () => {
 
     try {
       toast({
-        title: "Extração iniciada",
-        description: "A extrair legendas do vídeo...",
+        title: "A carregar ffmpeg...",
+        description: "A preparar extrator de legendas (pode demorar na primeira vez)",
       });
 
-      const result = await uploadFile<{ success: boolean; subtitles: Array<{ index: number; language: string; codec: string; filename: string }> }>(
-        `${API_BASE}/extract-mkv-subtitles`,
-        videoFile,
-        'video'
-      );
+      // Extract subtitles locally using ffmpeg.wasm
+      const tracks = await extractAllSubtitles(videoFile, (progress, message) => {
+        toast({
+          title: `Extração: ${progress}%`,
+          description: message,
+        });
+      });
 
-      if (result && result.success) {
-        if (result.subtitles && result.subtitles.length > 0) {
-          setExtractedSubtitles(result.subtitles);
-          toast({
-            title: "Legendas extraídas!",
-            description: `${result.subtitles.length} legenda(s) encontrada(s). Veja abaixo para fazer download.`,
-          });
-        } else {
-          setExtractedSubtitles([]);
-          toast({
-            title: "Nenhuma legenda encontrada",
-            description: "O vídeo não contém legendas embutidas",
-          });
-        }
-      } else {
-        throw new Error('Extração falhou');
-      }
+      // Convert to Subtitle format expected by the UI
+      const subtitles = tracks.map((track, idx) => ({
+        index: track.index,
+        language: track.language,
+        codec: track.codec,
+        filename: `subtitle_${idx}_${track.language}.srt`,
+        title: `Track ${idx + 1}`,
+        content: track.content
+      }));
+
+      setExtractedSubtitles(subtitles);
+
+      toast({
+        title: "Legendas extraídas!",
+        description: `${subtitles.length} legenda(s) encontrada(s). Processamento 100% local!`,
+      });
+
     } catch (err) {
       toast({
         variant: "destructive",
@@ -397,9 +400,8 @@ const VideoAnalysis = () => {
 
   const selectExtractedSubtitle = async (subtitle: Subtitle) => {
     try {
-      // Fetch subtitle content from backend
-      const response = await fetch(`${API_BASE}/download/${subtitle.filename}`);
-      const content = await response.text();
+      // Use the content that's already in the subtitle object (extracted locally)
+      const content = subtitle.content || '';
 
       // Mark as selected globally
       setSelectedSubtitle({
@@ -826,7 +828,20 @@ const VideoAnalysis = () => {
                         <Button
                           size="sm"
                           variant="default"
-                          onClick={() => window.open(`${API_BASE}/download/${subtitle.filename}`, '_blank')}
+                          onClick={() => {
+                            // Download locally extracted subtitle
+                            if (subtitle.content) {
+                              const blob = new Blob([subtitle.content], { type: 'text/plain' });
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = subtitle.filename;
+                              document.body.appendChild(a);
+                              a.click();
+                              document.body.removeChild(a);
+                              URL.revokeObjectURL(url);
+                            }
+                          }}
                         >
                           <Download className="h-4 w-4 mr-2" />
                           Download
