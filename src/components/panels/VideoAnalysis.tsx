@@ -7,8 +7,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useFileContext, type Subtitle } from "@/contexts/FileContext";
-import useVideoUpload from "@/hooks/useVideoUpload";
 import { parseSubtitleLanguage, getSubtitleBadges } from "@/lib/subtitleLanguages";
+import { analyzeVideoLocally } from "@/lib/videoAnalyzer";
 
 import { API_BASE } from "@/lib/constants";
 
@@ -63,7 +63,7 @@ const VideoAnalysis = () => {
   const [processingOperation, setProcessingOperation] = useState<string>("");
   const videoRef = useRef<HTMLVideoElement>(null);
   const { toast } = useToast();
-  const { progress, isUploading, error, uploadVideo } = useVideoUpload();
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const {
     videoFile,
     setVideoFile,
@@ -202,44 +202,41 @@ const VideoAnalysis = () => {
 
   const analyzeVideo = async (file: File) => {
     try {
+      setIsAnalyzing(true);
+
       toast({
-        title: "Analisando vídeo...",
-        description: `Enviando ${file.name} para análise`,
+        title: "Analisando vídeo localmente...",
+        description: `Lendo metadata de ${file.name}`,
       });
 
-      // Criar URL local do vídeo para preview (será gerenciado pelo contexto)
+      // Criar URL local do vídeo para preview
       const url = URL.createObjectURL(file);
       setVideoUrl(url);
 
-      const result = await uploadVideo<AnalyzeResponse>(file, (data) => {
-        console.log('✅ Upload e análise concluídos:', data);
-        setVideoInfo(data.video_info);
-        setCanRemux(data.can_remux_to_mp4);
-        setCanConvert(data.can_convert_to_mp4);
+      // Analyze video locally (no upload!)
+      const videoInfo = await analyzeVideoLocally(file);
 
-        // Set movie info if returned
-        if ((data as any).movie) {
-          setMovieInfo((data as any).movie);
-          console.log('🎬 Filme reconhecido:', (data as any).movie);
-        }
+      console.log('✅ Análise local concluída:', videoInfo);
+      setVideoInfo(videoInfo);
+      setCanRemux(false); // Not available without backend processing
+      setCanConvert(false); // Not available without backend processing
 
-        toast({
-          title: "Análise concluída!",
-          description: data.video_info
-            ? `${data.video_info.codec} • ${data.video_info.resolution} • ${data.video_info.duration_formatted}`
-            : "Vídeo carregado com sucesso",
-        });
+      toast({
+        title: "Análise local concluída!",
+        description: `${videoInfo.codec} • ${videoInfo.resolution} • ${videoInfo.duration_formatted}`,
       });
 
-      if (!result) {
-        throw new Error('Upload falhou');
-      }
+      // Recognize movie from filename (only send filename, not the whole file!)
+      recognizeMovie(file.name);
+
     } catch (err) {
       toast({
         variant: "destructive",
         title: "Erro na análise",
         description: err instanceof Error ? err.message : "Falha ao analisar vídeo",
       });
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
@@ -471,7 +468,7 @@ const VideoAnalysis = () => {
               </p>
             </div>
             <label htmlFor="video-file">
-              <Button variant="outline" size="sm" asChild disabled={isUploading}>
+              <Button variant="outline" size="sm" asChild disabled={isAnalyzing}>
                 <span>
                   <Upload className="h-4 w-4 mr-2" />
                   {videoFile ? 'Trocar Vídeo' : 'Selecionar Ficheiro'}
@@ -484,7 +481,7 @@ const VideoAnalysis = () => {
               accept="video/*,.mkv,.avi,.mov,.wmv,.flv,.webm"
               className="hidden"
               onChange={handleFileSelect}
-              disabled={isUploading}
+              disabled={isAnalyzing}
             />
           </div>
         </div>
@@ -517,17 +514,11 @@ const VideoAnalysis = () => {
                   </Badge>
                 </div>
               )}
-              {isUploading && (
+              {isAnalyzing && (
                 <div className="absolute bottom-0 left-0 right-0 bg-black/80 p-3">
-                  <div className="flex justify-between text-sm text-white mb-1">
-                    <span>A analisar...</span>
-                    <span className="font-mono">{progress.percentage}%</span>
-                  </div>
-                  <div className="h-1 bg-white/20 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-primary transition-all duration-300"
-                      style={{ width: `${progress.percentage}%` }}
-                    />
+                  <div className="flex items-center justify-center text-sm text-white">
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <span>A analisar vídeo localmente...</span>
                   </div>
                 </div>
               )}
@@ -742,7 +733,7 @@ const VideoAnalysis = () => {
                   variant="outline"
                   size="sm"
                   asChild
-                  disabled={isUploading || isProcessing}
+                  disabled={isAnalyzing || isProcessing}
                 >
                   <span>
                     <Upload className="h-4 w-4 mr-2" />
@@ -756,7 +747,7 @@ const VideoAnalysis = () => {
                 accept="video/*,.mkv,.avi,.mov,.wmv,.flv,.webm"
                 className="hidden"
                 onChange={handleFileSelect}
-                disabled={isUploading || isProcessing}
+                disabled={isAnalyzing || isProcessing}
               />
             </div>
           </Card>
