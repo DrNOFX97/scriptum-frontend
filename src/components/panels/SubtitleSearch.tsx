@@ -181,9 +181,12 @@ const SubtitleSearch = () => {
 
     setResults([]);
     const searchQuery = query.trim();
-    console.log('🔍 Pesquisando:', searchQuery, 'Idioma:', language);
 
-    await executeSearch(searchQuery, language);
+    // Map pt to pt-BR for OpenSubtitles API compatibility
+    const apiLanguage = language === 'pt' ? 'pt-BR' : language;
+    console.log('🔍 Pesquisando:', searchQuery, 'Idioma:', apiLanguage);
+
+    await executeSearch(searchQuery, apiLanguage);
   };
 
   // API call hook for downloading subtitles
