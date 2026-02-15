@@ -242,6 +242,9 @@ const VideoAnalysis = () => {
       // Recognize movie from filename (only send filename, not the whole file!)
       recognizeMovie(file.name);
 
+      // Auto-extract subtitles after analysis
+      await extractSubtitlesFromVideo(file);
+
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Falha ao analisar vídeo";
       setError(errorMsg);
@@ -352,27 +355,10 @@ const VideoAnalysis = () => {
     }
   };
 
-  const handleExtractSubtitles = async () => {
-    if (!videoFile) {
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Nenhum vídeo carregado",
-      });
-      return;
-    }
-
-    setIsProcessing(true);
-    setProcessingOperation("extract");
-
+  const extractSubtitlesFromVideo = async (file: File) => {
     try {
-      toast({
-        title: "A carregar ffmpeg...",
-        description: "A preparar extrator de legendas (pode demorar na primeira vez)",
-      });
-
       // Extract subtitles locally using ffmpeg.wasm
-      const tracks = await extractAllSubtitles(videoFile, (progress, message) => {
+      const tracks = await extractAllSubtitles(file, (progress, message) => {
         toast({
           title: `Extração: ${progress}%`,
           description: message,
@@ -391,20 +377,16 @@ const VideoAnalysis = () => {
 
       setExtractedSubtitles(subtitles);
 
-      toast({
-        title: "Legendas extraídas!",
-        description: `${subtitles.length} legenda(s) encontrada(s). Processamento 100% local!`,
-      });
+      if (subtitles.length > 0) {
+        toast({
+          title: "Legendas encontradas!",
+          description: `${subtitles.length} legenda(s) detectada(s) no vídeo`,
+        });
+      }
 
     } catch (err) {
-      toast({
-        variant: "destructive",
-        title: "Erro na extração",
-        description: err instanceof Error ? err.message : "Falha ao extrair legendas",
-      });
-    } finally {
-      setIsProcessing(false);
-      setProcessingOperation("");
+      console.error('Erro ao extrair legendas:', err);
+      // Don't show error toast - subtitles are optional
     }
   };
 
@@ -722,25 +704,6 @@ const VideoAnalysis = () => {
                   )}
                 </Button>
               )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExtractSubtitles}
-                disabled={isProcessing}
-              >
-                {isProcessing && processingOperation === "extract" ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    A extrair...
-                  </>
-                ) : (
-                  <>
-                    <FileText className="h-4 w-4 mr-2" />
-                    Extrair Legendas
-                  </>
-                )}
-              </Button>
-
               {/* Spacer to push load video button to the right */}
               <div className="flex-1" />
 
@@ -769,12 +732,12 @@ const VideoAnalysis = () => {
             </div>
           </Card>
 
-          {/* Extracted Subtitles */}
+          {/* Found Subtitles */}
           {extractedSubtitles.length > 0 && (
             <Card className="p-6">
               <div className="flex items-center gap-3 mb-4">
                 <FileText className="h-5 w-5 text-primary" />
-                <h3 className="font-semibold text-foreground">Legendas Extraídas</h3>
+                <h3 className="font-semibold text-foreground">Legendas encontradas</h3>
                 <Badge variant="secondary">{extractedSubtitles.length}</Badge>
               </div>
               <div className="space-y-2">
