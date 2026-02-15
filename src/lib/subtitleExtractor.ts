@@ -128,20 +128,36 @@ function parseSubtitleStreams(logs: string[]): Array<{ index: number; language: 
     // Look for subtitle stream lines like:
     // Stream #0:2(por): Subtitle: subrip
     // Stream #0:3(eng): Subtitle: ass (default)
-    const streamMatch = log.match(/Stream #0:(\d+)(?:\(([a-z]{3})\))?: Subtitle: (\w+)(.*)/i);
+    // Stream #0:4(pt-BR): Subtitle: srt (Brazilian Portuguese)
+    // Stream #0:5(en-US): Subtitle: srt (English - US)
+
+    // Match both 2-letter (pt, en) and 5-letter variants (pt-BR, en-US)
+    const streamMatch = log.match(/Stream #0:(\d+)(?:\(([a-z]{2,3}(?:-[A-Z]{2})?)\))?: Subtitle: (\w+)(.*)/i);
 
     if (streamMatch) {
-      const language = streamMatch[2] || 'unk';
+      let language = streamMatch[2] || 'unk';
       const codec = streamMatch[3];
       const rest = streamMatch[4] || '';
 
-      // Look for title in metadata
+      // Normalize language code
+      if (language !== 'unk') {
+        // Convert to lowercase, but keep the country code uppercase
+        // pt-br → pt-BR, en-us → en-US
+        const parts = language.toLowerCase().split('-');
+        if (parts.length === 2) {
+          language = `${parts[0]}-${parts[1].toUpperCase()}`;
+        } else {
+          language = parts[0];
+        }
+      }
+
+      // Look for title in metadata (anything in parentheses after codec)
       const titleMatch = rest.match(/\(([^)]+)\)/);
       const title = titleMatch ? titleMatch[1] : undefined;
 
       subtitleStreams.push({
         index: subtitleIndex++,
-        language: language.toLowerCase(),
+        language,
         title
       });
     }
