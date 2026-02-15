@@ -209,3 +209,64 @@ export function getSubtitleBadges(info: SubtitleInfo): string[] {
 
   return badges;
 }
+
+/**
+ * Convert any language code to BCP 47 format for HTML5 video track
+ * Preserves language variants (pt-BR, en-US, etc.) and converts 3-letter codes to 2-letter
+ * @param languageCode - Language code (can be 2-letter, 3-letter, or with variants)
+ * @returns BCP 47 code like 'pt', 'pt-BR', 'en', 'en-US', etc.
+ */
+export function toISO6391(languageCode: string): string {
+  // Normalize
+  const trimmedCode = languageCode.trim();
+
+  // Split into language and region (if present)
+  const parts = trimmedCode.split('-');
+  const baseLang = parts[0].toLowerCase();
+  const region = parts[1]?.toUpperCase(); // Keep region code (BR, PT, US, GB, etc.)
+
+  // Map 3-letter codes to 2-letter codes
+  const iso6392to1: Record<string, string> = {
+    'eng': 'en',
+    'por': 'pt',
+    'spa': 'es',
+    'fre': 'fr',
+    'fra': 'fr',
+    'ger': 'de',
+    'deu': 'de',
+    'ita': 'it',
+    'rus': 'ru',
+    'chi': 'zh',
+    'zho': 'zh',
+    'jpn': 'ja',
+    'ara': 'ar',
+    'kor': 'ko',
+    'dut': 'nl',
+    'nld': 'nl',
+    'swe': 'sv',
+    'nor': 'no',
+    'dan': 'da',
+    'fin': 'fi',
+    'pol': 'pl',
+    'tur': 'tr',
+    'heb': 'he',
+    'hin': 'hi',
+    'pob': 'pt', // Portuguese (Brazil) alternative code
+    'pb': 'pt',  // Portuguese (Brazil) alternative code
+  };
+
+  // Convert 3-letter base to 2-letter, or keep if already 2-letter
+  let convertedBase = iso6392to1[baseLang] || baseLang;
+
+  // If base is still not 2 letters and not in our map, default to 'en'
+  if (convertedBase.length !== 2) {
+    convertedBase = 'en';
+  }
+
+  // Reconstruct with region if present
+  if (region && region.length === 2) {
+    return `${convertedBase}-${region}`;
+  }
+
+  return convertedBase;
+}
