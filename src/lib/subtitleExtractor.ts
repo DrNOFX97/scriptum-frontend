@@ -121,8 +121,9 @@ export async function extractSubtitle(
  * Parse ffmpeg output to detect subtitle tracks
  */
 function parseSubtitleStreams(logs: string[]): Array<{ index: number; language: string; title?: string }> {
-  const subtitleStreams: Array<{ index: number; language: string; title?: string }> = [];
+  const subtitleStreams: Array<{ index: number; language: string; title?: string; codec?: string }> = [];
   let subtitleIndex = 0;
+  let currentStream: { index: number; language: string; title?: string; codec?: string } | null = null;
 
   for (const log of logs) {
     // Look for subtitle stream lines like:
@@ -135,6 +136,11 @@ function parseSubtitleStreams(logs: string[]): Array<{ index: number; language: 
     const streamMatch = log.match(/Stream #0:(\d+)(?:\(([a-z]{2,3}(?:-[A-Z]{2})?)\))?: Subtitle: (\w+)(.*)/i);
 
     if (streamMatch) {
+      // If we had a previous stream, save it
+      if (currentStream) {
+        subtitleStreams.push(currentStream);
+      }
+
       let language = streamMatch[2] || 'unk';
       const codec = streamMatch[3];
       const rest = streamMatch[4] || '';
@@ -155,12 +161,26 @@ function parseSubtitleStreams(logs: string[]): Array<{ index: number; language: 
       const titleMatch = rest.match(/\(([^)]+)\)/);
       const title = titleMatch ? titleMatch[1] : undefined;
 
-      subtitleStreams.push({
+      currentStream = {
         index: subtitleIndex++,
         language,
-        title
-      });
+        title,
+        codec
+      };
     }
+    // Look for metadata title on the next lines
+    // Format: "      title           : Brazilian"
+    else if (currentStream && /^\s+title\s+:/i.test(log)) {
+      const metadataTitle = log.split(':')[1]?.trim();
+      if (metadataTitle && metadataTitle !== 'N/A') {
+        currentStream.title = metadataTitle;
+      }
+    }
+  }
+
+  // Don't forget the last stream
+  if (currentStream) {
+    subtitleStreams.push(currentStream);
   }
 
   return subtitleStreams;
