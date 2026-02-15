@@ -660,78 +660,6 @@ const VideoAnalysis = () => {
             </Card>
           )}
 
-          {/* Actions */}
-          <Card className="p-6">
-            <h3 className="font-semibold text-foreground mb-3">Operações Disponíveis</h3>
-            <div className="flex flex-wrap gap-2">
-              {canRemux && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRemux}
-                  disabled={isProcessing}
-                >
-                  {isProcessing && processingOperation === "remux" ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      A remuxar...
-                    </>
-                  ) : (
-                    <>
-                      <Clapperboard className="h-4 w-4 mr-2" />
-                      Remux para MP4 (Rápido)
-                    </>
-                  )}
-                </Button>
-              )}
-              {canConvert && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleConvert}
-                  disabled={isProcessing}
-                >
-                  {isProcessing && processingOperation === "convert" ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      A converter...
-                    </>
-                  ) : (
-                    <>
-                      <Film className="h-4 w-4 mr-2" />
-                      Converter para MP4
-                    </>
-                  )}
-                </Button>
-              )}
-              {/* Spacer to push load video button to the right */}
-              <div className="flex-1" />
-
-              {/* Load Another Video Button */}
-              <label htmlFor="video-file-operations">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  asChild
-                  disabled={isAnalyzing || isProcessing}
-                >
-                  <span>
-                    <Upload className="h-4 w-4 mr-2" />
-                    Carregar Outro Vídeo
-                  </span>
-                </Button>
-              </label>
-              <input
-                id="video-file-operations"
-                type="file"
-                accept="video/*,.mkv,.avi,.mov,.wmv,.flv,.webm"
-                className="hidden"
-                onChange={handleFileSelect}
-                disabled={isAnalyzing || isProcessing}
-              />
-            </div>
-          </Card>
-
           {/* Found Subtitles */}
           {extractedSubtitles.length > 0 && (
             <Card className="p-6">
@@ -826,6 +754,78 @@ const VideoAnalysis = () => {
               </div>
             </Card>
           )}
+
+          {/* Other Operations */}
+          <Card className="p-6">
+            <h3 className="font-semibold text-foreground mb-3">Outras operações</h3>
+            <div className="flex flex-wrap gap-2">
+              {canRemux && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRemux}
+                  disabled={isProcessing}
+                >
+                  {isProcessing && processingOperation === "remux" ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      A remuxar...
+                    </>
+                  ) : (
+                    <>
+                      <Clapperboard className="h-4 w-4 mr-2" />
+                      Remux para MP4 (Rápido)
+                    </>
+                  )}
+                </Button>
+              )}
+              {canConvert && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleConvert}
+                  disabled={isProcessing}
+                >
+                  {isProcessing && processingOperation === "convert" ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      A converter...
+                    </>
+                  ) : (
+                    <>
+                      <Film className="h-4 w-4 mr-2" />
+                      Converter para MP4
+                    </>
+                  )}
+                </Button>
+              )}
+              {/* Spacer to push load video button to the right */}
+              <div className="flex-1" />
+
+              {/* Load Another Video Button */}
+              <label htmlFor="video-file-operations">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  asChild
+                  disabled={isAnalyzing || isProcessing}
+                >
+                  <span>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Carregar Outro Vídeo
+                  </span>
+                </Button>
+              </label>
+              <input
+                id="video-file-operations"
+                type="file"
+                accept="video/*,.mkv,.avi,.mov,.wmv,.flv,.webm"
+                className="hidden"
+                onChange={handleFileSelect}
+                disabled={isAnalyzing || isProcessing}
+              />
+            </div>
+          </Card>
         </motion.div>
       )}
     </motion.div>
