@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useFileContext, type Subtitle } from "@/contexts/FileContext";
-import { parseSubtitleLanguage, getSubtitleBadges } from "@/lib/subtitleLanguages";
+import { parseSubtitleLanguage, getSubtitleBadges, toISO6391 } from "@/lib/subtitleLanguages";
 import { analyzeVideoLocally } from "@/lib/videoAnalyzer";
 import { extractAllSubtitles } from "@/lib/subtitleExtractor";
 
@@ -110,13 +110,23 @@ const VideoAnalysis = () => {
 
       console.log('📝 Subtitle URL created:', subtitleUrl);
 
+      // Get language code from subtitle
+      const subtitleData = selectedSubtitle.data as any;
+      const languageCode = subtitleData.language || 'pt';
+      const iso6391Code = toISO6391(languageCode);
+
+      console.log('🌐 Language detection:', {
+        original: languageCode,
+        iso6391: iso6391Code
+      });
+
       // Add new track
       const track = document.createElement('track');
       track.kind = 'subtitles';
       track.label = selectedSubtitle.type === 'extracted'
-        ? (selectedSubtitle.data as any).filename
-        : (selectedSubtitle.data as any).name;
-      track.srclang = 'pt'; // Portuguese
+        ? subtitleData.filename
+        : subtitleData.name;
+      track.srclang = iso6391Code; // Use detected language
       track.src = subtitleUrl;
       track.default = true;
       track.mode = 'showing'; // Force showing immediately
