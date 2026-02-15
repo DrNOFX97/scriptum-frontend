@@ -118,6 +118,39 @@ export async function extractSubtitle(
 }
 
 /**
+ * Parse ffmpeg output to detect subtitle tracks
+ */
+function parseSubtitleStreams(logs: string[]): Array<{ index: number; language: string; title?: string }> {
+  const subtitleStreams: Array<{ index: number; language: string; title?: string }> = [];
+  let subtitleIndex = 0;
+
+  for (const log of logs) {
+    // Look for subtitle stream lines like:
+    // Stream #0:2(por): Subtitle: subrip
+    // Stream #0:3(eng): Subtitle: ass (default)
+    const streamMatch = log.match(/Stream #0:(\d+)(?:\(([a-z]{3})\))?: Subtitle: (\w+)(.*)/i);
+
+    if (streamMatch) {
+      const language = streamMatch[2] || 'unk';
+      const codec = streamMatch[3];
+      const rest = streamMatch[4] || '';
+
+      // Look for title in metadata
+      const titleMatch = rest.match(/\(([^)]+)\)/);
+      const title = titleMatch ? titleMatch[1] : undefined;
+
+      subtitleStreams.push({
+        index: subtitleIndex++,
+        language: language.toLowerCase(),
+        title
+      });
+    }
+  }
+
+  return subtitleStreams;
+}
+
+/**
  * Extract all subtitle tracks from MKV
  */
 export async function extractAllSubtitles(
@@ -126,19 +159,45 @@ export async function extractAllSubtitles(
 ): Promise<SubtitleTrack[]> {
   try {
     onProgress?.(10, 'A inicializar ffmpeg...');
+
+    // Capture logs to parse subtitle stream info
+    const logs: string[] = [];
     const ffmpegInstance = await loadFFmpeg((p) => onProgress?.(10 + p * 0.2, 'A carregar ffmpeg...'));
 
-    onProgress?.(30, 'A ler ficheiro MKV...');
+    ffmpegInstance.on('log', ({ message }) => {
+      logs.push(message);
+    });
+
+    onProgress?.(30, 'A analisar ficheiro MKV...');
     await ffmpegInstance.writeFile('input.mkv', await fetchFile(file));
 
-    // Try to extract up to 10 subtitle tracks (most MKVs have 1-3)
-    const extractedTracks: SubtitleTrack[] = [];
-    
-    for (let i = 0; i < 10; i++) {
-      try {
-        onProgress?.(30 + (i * 7), `A extrair legenda ${i + 1}...`);
+    // Probe file to detect subtitle streams
+    try {
+      await ffmpegInstance.exec(['-i', 'input.mkv']);
+    } catch {
+      // ffprobe exits with error code, but that's ok - we just want the logs
+    }
 
-        // Try to extract this subtitle stream
+    // Parse subtitle streams from logs
+    const subtitleStreams = parseSubtitleStreams(logs);
+
+    if (subtitleStreams.length === 0) {
+      throw new Error('Nenhuma legenda encontrada no ficheiro MKV');
+    }
+
+    onProgress?.(40, `${subtitleStreams.length} legenda(s) encontrada(s). A extrair...`);
+
+    // Extract each subtitle track
+    const extractedTracks: SubtitleTrack[] = [];
+
+    for (let i = 0; i < subtitleStreams.length; i++) {
+      try {
+        const stream = subtitleStreams[i];
+        const progressPercent = 40 + Math.floor((i / subtitleStreams.length) * 50);
+
+        onProgress?.(progressPercent, `A extrair ${stream.language.toUpperCase()} (${i + 1}/${subtitleStreams.length})...`);
+
+        // Extract this subtitle stream
         await ffmpegInstance.exec([
           '-i', 'input.mkv',
           '-map', `0:s:${i}`,
@@ -153,17 +212,17 @@ export async function extractAllSubtitles(
         // Clean up this output file
         await ffmpegInstance.deleteFile(`output_${i}.srt`);
 
-        // Add to results
+        // Add to results with language info
         extractedTracks.push({
           index: i,
-          language: 'unk', // We'll try to detect this later
+          language: stream.language,
+          title: stream.title,
           codec: 'srt',
           content
         });
 
       } catch (error) {
-        // No more subtitle tracks
-        break;
+        console.warn(`Failed to extract subtitle ${i}:`, error);
       }
     }
 
@@ -173,7 +232,7 @@ export async function extractAllSubtitles(
     onProgress?.(100, 'Extração concluída!');
 
     if (extractedTracks.length === 0) {
-      throw new Error('Nenhuma legenda encontrada no ficheiro MKV');
+      throw new Error('Falha ao extrair legendas');
     }
 
     return extractedTracks;
