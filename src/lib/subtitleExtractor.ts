@@ -138,12 +138,15 @@ function parseSubtitleStreams(logs: string[]): Array<{ index: number; language: 
     if (streamMatch) {
       // If we had a previous stream, save it
       if (currentStream) {
+        console.log('📝 Saving subtitle stream:', currentStream);
         subtitleStreams.push(currentStream);
       }
 
       let language = streamMatch[2] || 'unk';
       const codec = streamMatch[3];
       const rest = streamMatch[4] || '';
+
+      console.log('🎯 Found subtitle stream:', { language, codec, rest });
 
       // Normalize language code
       if (language !== 'unk') {
@@ -172,17 +175,21 @@ function parseSubtitleStreams(logs: string[]): Array<{ index: number; language: 
     // Format: "      title           : Brazilian"
     else if (currentStream && /^\s+title\s+:/i.test(log)) {
       const metadataTitle = log.split(':')[1]?.trim();
+      console.log('🏷️ Found metadata title for current stream:', metadataTitle);
       if (metadataTitle && metadataTitle !== 'N/A') {
         currentStream.title = metadataTitle;
+        console.log('✅ Updated stream title to:', metadataTitle);
       }
     }
   }
 
   // Don't forget the last stream
   if (currentStream) {
+    console.log('📝 Saving last subtitle stream:', currentStream);
     subtitleStreams.push(currentStream);
   }
 
+  console.log('🎬 Final parsed subtitle streams:', subtitleStreams);
   return subtitleStreams;
 }
 

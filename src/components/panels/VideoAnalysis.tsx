@@ -385,7 +385,7 @@ const VideoAnalysis = () => {
         language: track.language,
         codec: track.codec,
         filename: `subtitle_${idx}_${track.language}.srt`,
-        title: `Track ${idx + 1}`,
+        title: track.title, // Use the metadata title from MKV
         content: track.content
       }));
 
