@@ -64,7 +64,9 @@ const TranslationPanel = () => {
     selectedSubtitle,
     videoFile,
     movieInfo,
-    setSubtitleFile
+    setMovieInfo,
+    setSubtitleFile,
+    setSelectedSubtitle
   } = useFileContext();
   const { navigateToTab } = useNavigation();
 
@@ -173,9 +175,46 @@ const TranslationPanel = () => {
     setTranslationProgress(null);
   };
 
+  const recognizeMovieFromFilename = async (filename: string) => {
+    try {
+      console.log('🎬 Tentando reconhecer filme do nome do ficheiro:', filename);
+
+      const response = await fetch(`${API_BASE}/recognize-movie`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename }),
+      });
+
+      const data = await response.json();
+      console.log('📦 Resposta TMDB:', data);
+
+      if (data.success && data.movie) {
+        console.log('✅ Filme reconhecido:', data.movie.title);
+        setMovieInfo(data.movie);
+
+        toast({
+          title: "🎬 Filme reconhecido",
+          description: `${data.movie.title} (${data.movie.release_date?.substring(0, 4) || ''})`,
+        });
+
+        return data.movie;
+      } else {
+        console.log('❌ Filme não reconhecido automaticamente');
+        return null;
+      }
+    } catch (err) {
+      console.error('❌ Erro ao reconhecer filme:', err);
+      return null;
+    }
+  };
+
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Try to recognize movie from filename before translating
+      await recognizeMovieFromFilename(file.name);
+
+      // Proceed with translation
       await translateFile(file);
     }
   };
@@ -296,7 +335,7 @@ const TranslationPanel = () => {
     }
   };
 
-  const loadIntoSync = async () => {
+  const loadAsActiveSubtitle = async () => {
     if (!translatedData?.job_id) return;
 
     try {
@@ -308,21 +347,24 @@ const TranslationPanel = () => {
       }
 
       const blob = await response.blob();
+      const text = await blob.text();
       const filename = translatedData.output_filename || 'translated.srt';
       const file = new File([blob], filename, { type: 'text/plain' });
 
-      // Set it in the context
+      // Set as selected subtitle in context (available for all panels)
+      setSelectedSubtitle({
+        type: 'file',
+        data: file,
+        content: text,
+      });
+
+      // Also set as subtitle file
       setSubtitleFile(file);
 
       toast({
-        title: "✅ Legenda carregada",
-        description: "A redirecionar para sincronização...",
+        title: "✅ Legenda ativa definida",
+        description: `${filename} está agora disponível em todos os painéis`,
       });
-
-      // Navigate to sync panel after a short delay
-      setTimeout(() => {
-        navigateToTab('sync');
-      }, 500);
     } catch (err) {
       toast({
         variant: "destructive",
@@ -330,6 +372,16 @@ const TranslationPanel = () => {
         description: err instanceof Error ? err.message : "Falha ao carregar legenda",
       });
     }
+  };
+
+  const loadIntoSync = async () => {
+    // First load as active subtitle
+    await loadAsActiveSubtitle();
+
+    // Then navigate to sync
+    setTimeout(() => {
+      navigateToTab('sync');
+    }, 500);
   };
 
   const formatTime = (seconds: number): string => {
@@ -861,10 +913,20 @@ const TranslationPanel = () => {
                 Descarregar Ficheiro Traduzido
               </Button>
 
+              <Button
+                onClick={loadAsActiveSubtitle}
+                variant="outline"
+                className="w-full"
+                size="lg"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Usar como Legenda Ativa
+              </Button>
+
               {videoFile && (
                 <Button
                   onClick={loadIntoSync}
-                  variant="outline"
+                  variant="secondary"
                   className="w-full"
                   size="lg"
                 >
@@ -875,8 +937,8 @@ const TranslationPanel = () => {
 
               <p className="text-xs text-center text-muted-foreground pt-2">
                 {videoFile
-                  ? "Descarregue o ficheiro ou teste a sincronização com o vídeo carregado"
-                  : "Descarregue o ficheiro traduzido para usar"
+                  ? "💡 Descarregue, use como legenda ativa, ou teste com o vídeo carregado"
+                  : "💡 Descarregue ou use como legenda ativa para outros painéis"
                 }
               </p>
             </div>
