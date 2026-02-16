@@ -182,7 +182,42 @@ const VideoAnalysis = () => {
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Check and convert audio if needed (AC3 → AAC for browser compatibility)
+      const fileSizeGB = file.size / (1024 * 1024 * 1024);
+      const MAX_SIZE_FOR_CONVERSION = 2; // 2GB limit for browser conversion
+
+      // Check if file is too large for browser conversion
+      if (fileSizeGB > MAX_SIZE_FOR_CONVERSION) {
+        console.warn(`File too large for browser conversion: ${fileSizeGB.toFixed(1)}GB`);
+
+        // Just use original file and show warning if audio is incompatible
+        setVideoFile(file);
+        await analyzeVideo(file);
+
+        // Check audio codec quickly to warn user
+        try {
+          setIsProcessing(true);
+          setProcessingOperation("A verificar compatibilidade de áudio...");
+
+          const result = await ensureCompatibleAudio(file, () => {}, true);
+
+          if (!result.audioInfo?.isCompatible && result.audioInfo) {
+            toast({
+              variant: "destructive",
+              title: "⚠️ Áudio incompatível com navegador",
+              description: `${result.audioInfo.codec.toUpperCase()} não é suportado. Ficheiro muito grande (${fileSizeGB.toFixed(1)}GB) para conversão no browser. Use VLC ou converta manualmente.`,
+              duration: 8000,
+            });
+          }
+        } catch (err) {
+          console.error('Audio check failed:', err);
+        } finally {
+          setIsProcessing(false);
+          setProcessingOperation("");
+        }
+        return;
+      }
+
+      // File is small enough - try auto conversion
       try {
         setIsProcessing(true);
         setProcessingOperation("A verificar compatibilidade de áudio...");

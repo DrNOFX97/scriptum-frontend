@@ -65,7 +65,7 @@ export const FileProvider = ({ children }: { children: ReactNode }) => {
   const [extractedSubtitles, setExtractedSubtitles] = useState<Subtitle[]>([]);
   const [searchedSubtitles, setSearchedSubtitles] = useState<SearchedSubtitle[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [searchLanguage, setSearchLanguage] = useState<string>('pt');
+  const [searchLanguage, setSearchLanguage] = useState<string>('pt-PT');
   const [selectedSubtitle, setSelectedSubtitle] = useState<SelectedSubtitle | null>(null);
 
   const setVideoUrl = (url: string | null) => {

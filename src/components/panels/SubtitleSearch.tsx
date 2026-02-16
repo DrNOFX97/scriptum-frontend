@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Search, Download, Star, Globe, FileText, Film, Info, Play } from "lucide-react";
+import { Search, Download, Star, Globe, FileText, Film, Info, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -39,18 +39,18 @@ interface SearchResponse {
 
 // Ordem de fallback para idiomas - línguas latinas primeiro para melhor tradução
 const LANGUAGE_FALLBACK: Record<string, string[]> = {
-  'pt': ['es', 'it', 'fr', 'en'], // PT: prioriza espanhol, italiano, francês (sintaxe e gênero similar)
-  'pt-BR': ['es', 'it', 'fr', 'en'],
-  'es': ['pt', 'it', 'fr', 'en'],
-  'it': ['es', 'pt', 'fr', 'en'],
-  'fr': ['es', 'it', 'pt', 'en'],
-  'en': ['es', 'pt', 'fr', 'it'],
+  'pt-PT': ['pt-BR', 'es', 'it', 'fr', 'en'], // PT-PT: prioriza PT-BR, depois espanhol, italiano, francês
+  'pt-BR': ['pt-PT', 'es', 'it', 'fr', 'en'],
+  'es': ['pt-PT', 'pt-BR', 'it', 'fr', 'en'],
+  'it': ['es', 'pt-PT', 'pt-BR', 'fr', 'en'],
+  'fr': ['es', 'it', 'pt-PT', 'pt-BR', 'en'],
+  'en': ['es', 'pt-PT', 'pt-BR', 'fr', 'it'],
   'de': ['en', 'fr', 'es'],
 };
 
 const LANGUAGE_NAMES: Record<string, string> = {
-  'pt': 'Português',
-  'pt-BR': 'Português (BR)',
+  'pt-PT': 'Português (Portugal)',
+  'pt-BR': 'Português (Brasil)',
   'en': 'Inglês',
   'es': 'Espanhol',
   'it': 'Italiano',
@@ -75,7 +75,7 @@ const SubtitleSearch = () => {
   } = useFileContext();
 
   const [query, setQuery] = useState(contextSearchQuery);
-  const [language, setLanguage] = useState(contextSearchLanguage);
+  const [language, setLanguage] = useState(contextSearchLanguage || 'pt-PT');
   const [results, setResults] = useState<Subtitle[]>(searchedSubtitles);
   const [isDownloading, setIsDownloading] = useState<string | null>(null);
   const [isTesting, setIsTesting] = useState<string | null>(null);
@@ -120,7 +120,8 @@ const SubtitleSearch = () => {
       showSuccessToast: false, // We'll handle success toast manually
       showErrorToast: false, // We'll handle error toast manually
       onSuccess: (data) => {
-        const foundSubtitles = data.subtitles || data.results || [];
+        console.log('🔍 Resposta completa da API:', JSON.stringify(data, null, 2));
+        const foundSubtitles = data.data?.subtitles || data.subtitles || data.results || [];
 
         if (foundSubtitles.length > 0) {
           console.log(`✅ Encontradas ${foundSubtitles.length} legendas`);
@@ -182,11 +183,9 @@ const SubtitleSearch = () => {
     setResults([]);
     const searchQuery = query.trim();
 
-    // Map pt to pt-BR for OpenSubtitles API compatibility
-    const apiLanguage = language === 'pt' ? 'pt-BR' : language;
-    console.log('🔍 Pesquisando:', searchQuery, 'Idioma:', apiLanguage);
+    console.log('🔍 Pesquisando:', searchQuery, 'Idioma:', language);
 
-    await executeSearch(searchQuery, apiLanguage);
+    await executeSearch(searchQuery, language);
   };
 
   // API call hook for downloading subtitles
@@ -251,8 +250,8 @@ const SubtitleSearch = () => {
         });
 
         toast({
-          title: "✅ Legenda carregada",
-          description: `${subtitle.name} - Redirecionando para o player...`,
+          title: "✅ Legenda selecionada",
+          description: `${subtitle.name} - Carregando no player...`,
         });
 
         // Navigate to video player
@@ -348,8 +347,8 @@ const SubtitleSearch = () => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="pt">Portuguese (PT)</SelectItem>
-                <SelectItem value="pt-BR">Portuguese (BR)</SelectItem>
+                <SelectItem value="pt-PT">Português (Portugal)</SelectItem>
+                <SelectItem value="pt-BR">Português (Brasil)</SelectItem>
                 <SelectItem value="en">English</SelectItem>
                 <SelectItem value="es">Spanish</SelectItem>
                 <SelectItem value="fr">French</SelectItem>
@@ -452,8 +451,8 @@ const SubtitleSearch = () => {
                       onClick={() => testSubtitle(subtitle)}
                       disabled={isTesting === subtitle.id || isDownloading === subtitle.id}
                     >
-                      <Play className="h-4 w-4 mr-2" />
-                      {isTesting === subtitle.id ? 'A carregar...' : 'Testar'}
+                      <Check className="h-4 w-4 mr-2" />
+                      {isTesting === subtitle.id ? 'A selecionar...' : 'Selecionar'}
                     </Button>
                     <Button
                       size="sm"

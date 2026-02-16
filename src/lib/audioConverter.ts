@@ -196,7 +196,8 @@ export async function convertAudioToAAC(
  */
 export async function ensureCompatibleAudio(
   file: File,
-  onProgress?: (progress: number, message: string) => void
+  onProgress?: (progress: number, message: string) => void,
+  checkOnly: boolean = false
 ): Promise<{ file: File; converted: boolean; audioInfo: AudioStreamInfo | null }> {
   try {
     // Detect audio codec
@@ -212,6 +213,12 @@ export async function ensureCompatibleAudio(
     if (audioInfo.isCompatible) {
       // Audio is already compatible - return original file
       onProgress?.(100, `Áudio ${audioInfo.codec.toUpperCase()} é compatível!`);
+      return { file, converted: false, audioInfo };
+    }
+
+    // If check only mode, don't convert
+    if (checkOnly) {
+      onProgress?.(100, `Áudio ${audioInfo.codec.toUpperCase()} não é compatível`);
       return { file, converted: false, audioInfo };
     }
 
