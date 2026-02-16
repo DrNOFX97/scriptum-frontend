@@ -1,15 +1,18 @@
 import { useEffect } from "react";
-import { useState } from "react";
-import { motion } from "framer-motion";
-import { Languages, Upload, FileText, Download, CheckCircle2, AlertCircle } from "lucide-react";
+import { useState, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Languages, Upload, FileText, Download, CheckCircle2, AlertCircle, Search, Film, Zap, Clock, Sparkles, Play, PartyPopper } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useFileContext } from "@/contexts/FileContext";
+import { useNavigation } from "@/contexts/NavigationContext";
 import useFileUpload from "@/hooks/useFileUpload";
 
 import { API_BASE } from "@/lib/constants";
@@ -25,14 +28,120 @@ interface TranslateResponse {
   error?: string;
 }
 
+interface TranslationProgress {
+  status: string;
+  total_entries?: number;
+  current_entry?: number;
+  percentage?: number;
+  speed?: number;
+  eta_seconds?: number;
+  recent_translations?: Array<{ original: string; translated: string }>;
+  message?: string;
+  total_time?: number;
+}
+
 const TranslationPanel = () => {
   const [sourceLang, setSourceLang] = useState("en");
-  const [targetLang, setTargetLang] = useState("pt");
+  const [targetLang, setTargetLang] = useState("pt-PT");  // Foco em pt-PT
   const [context, setContext] = useState("");
   const [tone, setTone] = useState("casual");
   const [translatedData, setTranslatedData] = useState<any>(null);
+  const [subtitleSource, setSubtitleSource] = useState<'upload' | 'extracted' | 'searched'>('upload');
+  const [selectedExtractedIndex, setSelectedExtractedIndex] = useState<number>(0);
+
+  // Progress tracking
+  const [translationProgress, setTranslationProgress] = useState<TranslationProgress | null>(null);
+  const [jobId, setJobId] = useState<string | null>(null);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Language detection
+  const [isDetectingLanguage, setIsDetectingLanguage] = useState(false);
+
   const { toast } = useToast();
   const { progress, isUploading, error, uploadFile } = useFileUpload();
+  const {
+    extractedSubtitles,
+    selectedSubtitle,
+    videoFile,
+    setSubtitleFile
+  } = useFileContext();
+  const { navigateToTab } = useNavigation();
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, []);
+
+  const startProgressPolling = (jobId: string) => {
+    // Clear any existing interval
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+    }
+
+    // Poll every 500ms
+    pollingIntervalRef.current = setInterval(async () => {
+      try {
+        const response = await fetch(`${API_BASE}/translate-status/${jobId}`);
+        const data = await response.json();
+
+        if (data.success && data.progress) {
+          setTranslationProgress(data.progress);
+
+          // Stop polling if completed or error
+          if (data.status === 'completed') {
+            if (pollingIntervalRef.current) {
+              clearInterval(pollingIntervalRef.current);
+              pollingIntervalRef.current = null;
+            }
+
+            toast({
+              title: "Tradução concluída!",
+              description: `${data.progress.total_entries || 0} legendas traduzidas`,
+            });
+
+            // Prepare download
+            setTranslatedData({
+              success: true,
+              job_id: jobId,
+              output_filename: data.output_filename,
+              stats: {
+                total_entries: data.progress.total_entries || 0,
+                translated: data.progress.total_entries || 0,
+                time_taken: data.progress.total_time || 0,
+              }
+            });
+          } else if (data.status === 'error') {
+            if (pollingIntervalRef.current) {
+              clearInterval(pollingIntervalRef.current);
+              pollingIntervalRef.current = null;
+            }
+
+            toast({
+              variant: "destructive",
+              title: "Erro na tradução",
+              description: data.error || "Falha ao traduzir legendas",
+            });
+
+            setTranslationProgress(null);
+          }
+        }
+      } catch (err) {
+        console.error('Polling error:', err);
+      }
+    }, 500);
+  };
+
+  const stopProgressPolling = () => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+    setTranslationProgress(null);
+  };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -41,14 +150,81 @@ const TranslationPanel = () => {
     }
   };
 
+  const handleTranslateFromSource = async () => {
+    try {
+      let subtitleContent: string | null = null;
+      let filename = 'subtitle.srt';
+
+      // Get subtitle content based on source
+      if (subtitleSource === 'extracted' && extractedSubtitles.length > 0) {
+        const selected = extractedSubtitles[selectedExtractedIndex];
+        subtitleContent = selected.content;
+        filename = selected.filename || `extracted_${selected.language}.srt`;
+
+        // Set source language based on extracted subtitle
+        if (selected.language && !sourceLang) {
+          const langMap: Record<string, string> = {
+            'Portuguese': 'pt',
+            'Portuguese (PT)': 'pt-PT',
+            'Portuguese (BR)': 'pt-BR',
+            'English': 'en',
+            'Spanish': 'es',
+            'French': 'fr',
+            'German': 'de'
+          };
+          const detectedLang = langMap[selected.language] || 'en';
+          setSourceLang(detectedLang);
+        }
+      } else if (subtitleSource === 'searched' && selectedSubtitle) {
+        subtitleContent = selectedSubtitle.content;
+        filename = `${selectedSubtitle.data.name}.srt`;
+
+        // Try to detect source language from subtitle metadata
+        if (selectedSubtitle.data && 'language' in selectedSubtitle.data) {
+          const lang = selectedSubtitle.data.language as string;
+          if (lang.includes('English')) setSourceLang('en');
+          else if (lang.includes('Portuguese (PT)')) setSourceLang('pt-PT');
+          else if (lang.includes('Portuguese (BR)')) setSourceLang('pt-BR');
+          else if (lang.includes('Spanish')) setSourceLang('es');
+          else if (lang.includes('French')) setSourceLang('fr');
+        }
+      }
+
+      if (!subtitleContent) {
+        toast({
+          variant: "destructive",
+          title: "Nenhuma legenda selecionada",
+          description: "Selecione uma legenda para traduzir",
+        });
+        return;
+      }
+
+      // Convert content to File object
+      const blob = new Blob([subtitleContent], { type: 'text/plain' });
+      const file = new File([blob], filename, { type: 'text/plain' });
+
+      await translateFile(file);
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: err instanceof Error ? err.message : "Falha ao preparar legenda para tradução",
+      });
+    }
+  };
+
   const translateFile = async (file: File) => {
     try {
+      // Reset progress
+      setTranslationProgress({ status: 'starting', percentage: 0, message: 'Iniciando tradução...' });
+      setTranslatedData(null);
+
       toast({
-        title: "Traduzindo...",
-        description: `Enviando ${file.name} para tradução`,
+        title: "Iniciando tradução...",
+        description: `Enviando ${file.name}`,
       });
 
-      const result = await uploadFile<TranslateResponse>(
+      const result = await uploadFile<{ success: boolean; job_id?: string; error?: string }>(
         `${API_BASE}/translate`,
         file,
         'subtitle',
@@ -60,16 +236,16 @@ const TranslationPanel = () => {
         }
       );
 
-      if (result && result.success) {
-        setTranslatedData(result);
+      if (result && result.success && result.job_id) {
+        setJobId(result.job_id);
+        startProgressPolling(result.job_id);
+
         toast({
-          title: "Tradução concluída!",
-          description: result.stats 
-            ? `${result.stats.translated} de ${result.stats.total_entries} legendas traduzidas em ${result.stats.time_taken.toFixed(1)}s`
-            : "Ficheiro traduzido com sucesso",
+          title: "Tradução iniciada",
+          description: "Acompanhe o progresso abaixo",
         });
       } else {
-        throw new Error(result?.error || 'Tradução falhou');
+        throw new Error(result?.error || 'Falha ao iniciar tradução');
       }
     } catch (err) {
       toast({
@@ -77,15 +253,118 @@ const TranslationPanel = () => {
         title: "Erro na tradução",
         description: err instanceof Error ? err.message : "Falha ao traduzir legendas",
       });
+      setTranslationProgress(null);
     }
   };
 
   const downloadTranslated = () => {
-    if (translatedData?.translated_file) {
+    if (translatedData?.job_id) {
       const link = document.createElement('a');
-      link.href = `${API_BASE}/download/${translatedData.translated_file}`;
-      link.download = translatedData.translated_file;
+      link.href = `${API_BASE}/translate-download/${translatedData.job_id}`;
+      link.download = translatedData.output_filename || 'translated.srt';
       link.click();
+    }
+  };
+
+  const loadIntoSync = async () => {
+    if (!translatedData?.job_id) return;
+
+    try {
+      // Download the translated file
+      const response = await fetch(`${API_BASE}/translate-download/${translatedData.job_id}`);
+
+      if (!response.ok) {
+        throw new Error('Falha ao carregar ficheiro traduzido');
+      }
+
+      const blob = await response.blob();
+      const filename = translatedData.output_filename || 'translated.srt';
+      const file = new File([blob], filename, { type: 'text/plain' });
+
+      // Set it in the context
+      setSubtitleFile(file);
+
+      toast({
+        title: "✅ Legenda carregada",
+        description: "A redirecionar para sincronização...",
+      });
+
+      // Navigate to sync panel after a short delay
+      setTimeout(() => {
+        navigateToTab('sync');
+      }, 500);
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: err instanceof Error ? err.message : "Falha ao carregar legenda",
+      });
+    }
+  };
+
+  const formatTime = (seconds: number): string => {
+    if (seconds < 60) return `${seconds}s`;
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}m ${secs}s`;
+  };
+
+  const detectLanguage = async () => {
+    try {
+      setIsDetectingLanguage(true);
+
+      let subtitleContent: string | null = null;
+      let file: File | null = null;
+
+      // Get subtitle content based on source
+      if (subtitleSource === 'extracted' && extractedSubtitles.length > 0) {
+        const selected = extractedSubtitles[selectedExtractedIndex];
+        subtitleContent = selected.content;
+        const blob = new Blob([subtitleContent], { type: 'text/plain' });
+        file = new File([blob], 'subtitle.srt', { type: 'text/plain' });
+      } else if (subtitleSource === 'searched' && selectedSubtitle) {
+        subtitleContent = selectedSubtitle.content;
+        const blob = new Blob([subtitleContent], { type: 'text/plain' });
+        file = new File([blob], 'subtitle.srt', { type: 'text/plain' });
+      }
+
+      if (!file) {
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: "Selecione uma legenda primeiro",
+        });
+        return;
+      }
+
+      // Send to backend for detection
+      const formData = new FormData();
+      formData.append('subtitle', file);
+
+      const response = await fetch(`${API_BASE}/detect-language`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.language) {
+        setSourceLang(data.language);
+        toast({
+          title: "Idioma detectado",
+          description: `Idioma de origem: ${data.language.toUpperCase()}`,
+        });
+      } else {
+        throw new Error(data.error || 'Falha na deteção de idioma');
+      }
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Erro na deteção",
+        description: err instanceof Error ? err.message : "Falha ao detetar idioma",
+      });
+    } finally {
+      setIsDetectingLanguage(false);
     }
   };
 
@@ -111,21 +390,111 @@ const TranslationPanel = () => {
         </p>
       </div>
 
-      {/* Upload & Config */}
+      {/* Subtitle Source Selection */}
       <Card className="p-6">
         <div className="space-y-4">
           <div>
             <label className="text-sm font-medium text-foreground mb-2 block">
-              Ficheiro de Legendas
+              Fonte da Legenda
             </label>
-            <div className="flex items-center gap-2">
-              <Input
-                type="file"
-                accept=".srt,.vtt,.ass,.ssa"
-                onChange={handleFileSelect}
-                disabled={isUploading}
-              />
-            </div>
+            <Tabs value={subtitleSource} onValueChange={(v) => setSubtitleSource(v as any)}>
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="upload">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Carregar
+                </TabsTrigger>
+                <TabsTrigger value="extracted" disabled={!extractedSubtitles || extractedSubtitles.length === 0}>
+                  <Film className="h-4 w-4 mr-2" />
+                  MKV ({extractedSubtitles?.length || 0})
+                </TabsTrigger>
+                <TabsTrigger value="searched" disabled={!selectedSubtitle}>
+                  <Search className="h-4 w-4 mr-2" />
+                  Pesquisa
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="upload" className="mt-4">
+                <Input
+                  type="file"
+                  accept=".srt,.vtt,.ass,.ssa"
+                  onChange={handleFileSelect}
+                  disabled={isUploading}
+                />
+                <p className="text-xs text-muted-foreground mt-2">
+                  Carregue um ficheiro SRT, VTT, ASS ou SSA
+                </p>
+              </TabsContent>
+
+              <TabsContent value="extracted" className="mt-4">
+                {extractedSubtitles && extractedSubtitles.length > 0 ? (
+                  <div className="space-y-2">
+                    <Select
+                      value={selectedExtractedIndex.toString()}
+                      onValueChange={(v) => setSelectedExtractedIndex(parseInt(v))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {extractedSubtitles.map((sub, idx) => (
+                          <SelectItem key={idx} value={idx.toString()}>
+                            <div className="flex items-center gap-2">
+                              <FileText className="h-4 w-4" />
+                              <span>{sub.language || `Faixa ${idx + 1}`}</span>
+                              {sub.title && <span className="text-muted-foreground">• {sub.title}</span>}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {videoFile && (
+                      <p className="text-xs text-muted-foreground">
+                        Extraída de: {videoFile.name}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Nenhuma legenda extraída. Carregue um ficheiro MKV e extraia as legendas primeiro.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </TabsContent>
+
+              <TabsContent value="searched" className="mt-4">
+                {selectedSubtitle ? (
+                  <Card className="p-4 bg-primary/5">
+                    <div className="flex items-start gap-3">
+                      <FileText className="h-5 w-5 text-primary mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-foreground truncate">
+                          {(selectedSubtitle.data as any).name}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="secondary" className="text-xs">
+                            {(selectedSubtitle.data as any).language}
+                          </Badge>
+                          {(selectedSubtitle.data as any).source && (
+                            <Badge variant="outline" className="text-xs">
+                              {(selectedSubtitle.data as any).source === 'legendasdivx' ? '🇵🇹 LegendasDivx' : '🌍 OpenSubtitles'}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                ) : (
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Nenhuma legenda selecionada. Pesquise e selecione uma legenda primeiro.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </TabsContent>
+            </Tabs>
           </div>
 
           <div>
@@ -145,19 +514,44 @@ const TranslationPanel = () => {
               <label className="text-sm font-medium text-foreground mb-2 block">
                 Idioma de Origem
               </label>
-              <Select value={sourceLang} onValueChange={setSourceLang} disabled={isUploading}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="en">English</SelectItem>
-                  <SelectItem value="pt">Portuguese (PT)</SelectItem>
-                  <SelectItem value="pt-BR">Portuguese (BR)</SelectItem>
-                  <SelectItem value="es">Spanish</SelectItem>
-                  <SelectItem value="fr">French</SelectItem>
-                  <SelectItem value="de">German</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Select value={sourceLang} onValueChange={setSourceLang} disabled={isUploading}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="en">Inglês</SelectItem>
+                    <SelectItem value="pt-PT">Português (Portugal)</SelectItem>
+                    <SelectItem value="pt-BR">Português (Brasil)</SelectItem>
+                    <SelectItem value="es">Espanhol</SelectItem>
+                    <SelectItem value="it">Italiano</SelectItem>
+                    <SelectItem value="fr">Francês</SelectItem>
+                    <SelectItem value="de">Alemão</SelectItem>
+                  </SelectContent>
+                </Select>
+                {subtitleSource !== 'upload' && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={detectLanguage}
+                    disabled={isDetectingLanguage || isUploading}
+                    className="shrink-0"
+                    title="Auto-detectar idioma"
+                  >
+                    {isDetectingLanguage ? (
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                    ) : (
+                      <Sparkles className="h-4 w-4" />
+                    )}
+                  </Button>
+                )}
+              </div>
+              {subtitleSource !== 'upload' && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Clique no ícone ✨ para detetar automaticamente
+                </p>
+              )}
             </div>
 
             <div>
@@ -169,12 +563,13 @@ const TranslationPanel = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pt">Portuguese (PT)</SelectItem>
-                  <SelectItem value="pt-BR">Portuguese (BR)</SelectItem>
-                  <SelectItem value="en">English</SelectItem>
-                  <SelectItem value="es">Spanish</SelectItem>
-                  <SelectItem value="fr">French</SelectItem>
-                  <SelectItem value="de">German</SelectItem>
+                  <SelectItem value="pt-PT">🇵🇹 Português (Portugal)</SelectItem>
+                  <SelectItem value="pt-BR">🇧🇷 Português (Brasil)</SelectItem>
+                  <SelectItem value="en">Inglês</SelectItem>
+                  <SelectItem value="es">Espanhol</SelectItem>
+                  <SelectItem value="it">Italiano</SelectItem>
+                  <SelectItem value="fr">Francês</SelectItem>
+                  <SelectItem value="de">Alemão</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -195,24 +590,159 @@ const TranslationPanel = () => {
               </SelectContent>
             </Select>
           </div>
+
+          {/* Translate button for non-upload sources */}
+          {subtitleSource !== 'upload' && (
+            <Button
+              onClick={handleTranslateFromSource}
+              disabled={isUploading}
+              className="w-full"
+            >
+              <Languages className="h-4 w-4 mr-2" />
+              {isUploading ? 'A traduzir...' : 'Traduzir Legenda'}
+            </Button>
+          )}
         </div>
       </Card>
 
       {/* Upload Progress */}
-      {isUploading && (
+      {isUploading && !translationProgress && (
         <Card className="p-4">
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">A traduzir...</span>
+              <span className="text-muted-foreground">A enviar...</span>
               <span className="font-mono text-foreground">{progress.percentage}%</span>
             </div>
             <Progress value={progress.percentage} className="h-2" />
             <p className="text-xs text-muted-foreground">
-              Isto pode levar alguns minutos dependendo do tamanho do ficheiro
+              A carregar ficheiro para o servidor
             </p>
           </div>
         </Card>
       )}
+
+      {/* Translation Progress */}
+      <AnimatePresence>
+        {translationProgress && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Card className="p-6 border-primary/20">
+              <div className="space-y-4">
+                {/* Header with percentage */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Languages className="h-5 w-5 text-primary animate-pulse" />
+                    <h3 className="font-semibold text-foreground">
+                      {translationProgress.status === 'complete' ? 'Tradução Concluída' : 'A Traduzir...'}
+                    </h3>
+                  </div>
+                  <div className="text-3xl font-bold font-mono text-primary">
+                    {translationProgress.percentage || 0}%
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                <Progress value={translationProgress.percentage || 0} className="h-3" />
+
+                {/* Stats row */}
+                <div className="grid grid-cols-3 gap-4">
+                  {/* Current/Total */}
+                  {translationProgress.total_entries && (
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Progresso</p>
+                      <p className="text-lg font-bold font-mono text-foreground">
+                        {translationProgress.current_entry || 0}/{translationProgress.total_entries}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Speed */}
+                  {translationProgress.speed !== undefined && (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1">
+                        <Zap className="h-3 w-3 text-muted-foreground" />
+                        <p className="text-xs text-muted-foreground">Velocidade</p>
+                      </div>
+                      <p className="text-lg font-bold font-mono text-foreground">
+                        {translationProgress.speed.toFixed(1)}/s
+                      </p>
+                    </div>
+                  )}
+
+                  {/* ETA */}
+                  {translationProgress.eta_seconds !== undefined && translationProgress.eta_seconds > 0 && (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3 text-muted-foreground" />
+                        <p className="text-xs text-muted-foreground">Tempo Restante</p>
+                      </div>
+                      <p className="text-lg font-bold font-mono text-foreground">
+                        {formatTime(translationProgress.eta_seconds)}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Status message */}
+                {translationProgress.message && (
+                  <p className="text-sm text-muted-foreground italic">
+                    {translationProgress.message}
+                  </p>
+                )}
+
+                {/* Recent translations stream */}
+                {translationProgress.recent_translations && translationProgress.recent_translations.length > 0 && (
+                  <div className="space-y-2 pt-2">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="h-px flex-1 bg-border" />
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        Últimas Traduções
+                      </p>
+                      <div className="h-px flex-1 bg-border" />
+                    </div>
+                    <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+                      {translationProgress.recent_translations.map((trans, idx) => (
+                        <motion.div
+                          key={idx}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: idx * 0.05 }}
+                          className="rounded-lg border border-border bg-card/50 p-3 space-y-2"
+                        >
+                          <div className="flex items-start gap-2">
+                            <div className="flex-shrink-0 w-12 h-6 rounded bg-secondary/30 flex items-center justify-center">
+                              <span className="text-xs font-mono text-muted-foreground uppercase">
+                                {sourceLang}
+                              </span>
+                            </div>
+                            <p className="text-sm text-foreground/80 flex-1 leading-relaxed">
+                              {trans.original}
+                            </p>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <div className="flex-shrink-0 w-12 h-6 rounded bg-primary/20 flex items-center justify-center">
+                              <span className="text-xs font-mono text-primary uppercase">
+                                {targetLang}
+                              </span>
+                            </div>
+                            <p className="text-sm text-foreground font-medium flex-1 leading-relaxed">
+                              {trans.translated}
+                            </p>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Error Alert */}
       {error && (
@@ -244,31 +774,77 @@ const TranslationPanel = () => {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
         >
-          <Card className="p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <CheckCircle2 className="h-5 w-5 text-green-500" />
-              <h3 className="font-semibold text-foreground">Tradução Concluída</h3>
+          <Card className="p-6 border-2 border-green-500/20 bg-green-500/5">
+            {/* Success Header */}
+            <div className="flex items-center gap-3 mb-6">
+              <div className="h-12 w-12 rounded-full bg-green-500/20 flex items-center justify-center">
+                <PartyPopper className="h-6 w-6 text-green-500" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-foreground">Tradução Concluída!</h3>
+                <p className="text-sm text-muted-foreground">
+                  A sua legenda foi traduzida com sucesso
+                </p>
+              </div>
             </div>
+
+            {/* Stats */}
             {translatedData.stats && (
-              <div className="grid grid-cols-3 gap-4 mb-4">
-                <div>
-                  <p className="text-xs text-muted-foreground">Total de Legendas</p>
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="text-center p-3 rounded-lg bg-background/50">
+                  <p className="text-xs text-muted-foreground mb-1">Total de Legendas</p>
                   <p className="text-2xl font-bold text-foreground">{translatedData.stats.total_entries}</p>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Traduzidas</p>
+                <div className="text-center p-3 rounded-lg bg-background/50">
+                  <p className="text-xs text-muted-foreground mb-1">Traduzidas</p>
                   <p className="text-2xl font-bold text-green-500">{translatedData.stats.translated}</p>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Tempo</p>
+                <div className="text-center p-3 rounded-lg bg-background/50">
+                  <p className="text-xs text-muted-foreground mb-1">Tempo</p>
                   <p className="text-2xl font-bold text-foreground">{translatedData.stats.time_taken.toFixed(1)}s</p>
                 </div>
               </div>
             )}
-            <Button onClick={downloadTranslated} className="w-full">
-              <Download className="h-4 w-4 mr-2" />
-              Descarregar Ficheiro Traduzido
-            </Button>
+
+            {/* File info */}
+            <div className="mb-6 p-4 rounded-lg bg-background/50 border border-border">
+              <div className="flex items-center gap-2 text-sm">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium text-foreground">{translatedData.output_filename || 'translated.srt'}</span>
+              </div>
+              <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                <Badge variant="secondary">{sourceLang.toUpperCase()}</Badge>
+                <span>→</span>
+                <Badge variant="default">{targetLang.toUpperCase()}</Badge>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-2">
+              <Button onClick={downloadTranslated} className="w-full" size="lg">
+                <Download className="h-4 w-4 mr-2" />
+                Descarregar Ficheiro Traduzido
+              </Button>
+
+              {videoFile && (
+                <Button
+                  onClick={loadIntoSync}
+                  variant="outline"
+                  className="w-full"
+                  size="lg"
+                >
+                  <Play className="h-4 w-4 mr-2" />
+                  Testar com Vídeo (Sync)
+                </Button>
+              )}
+
+              <p className="text-xs text-center text-muted-foreground pt-2">
+                {videoFile
+                  ? "Descarregue o ficheiro ou teste a sincronização com o vídeo carregado"
+                  : "Descarregue o ficheiro traduzido para usar"
+                }
+              </p>
+            </div>
           </Card>
         </motion.div>
       )}
