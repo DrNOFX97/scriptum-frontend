@@ -63,9 +63,39 @@ const TranslationPanel = () => {
     extractedSubtitles,
     selectedSubtitle,
     videoFile,
+    movieInfo,
     setSubtitleFile
   } = useFileContext();
   const { navigateToTab } = useNavigation();
+
+  // Auto-fill context from TMDB movie info
+  useEffect(() => {
+    if (movieInfo && !context) {
+      // Build context from movie info
+      const movieContext = [];
+
+      if (movieInfo.title) {
+        movieContext.push(movieInfo.title);
+      }
+
+      if (movieInfo.overview) {
+        // Limit overview to first 150 characters
+        const overview = movieInfo.overview.length > 150
+          ? movieInfo.overview.substring(0, 150) + '...'
+          : movieInfo.overview;
+        movieContext.push(overview);
+      }
+
+      if (movieInfo.genres && movieInfo.genres.length > 0) {
+        const genres = movieInfo.genres.map((g: any) => g.name).join(', ');
+        movieContext.push(genres);
+      }
+
+      if (movieContext.length > 0) {
+        setContext(movieContext.join(' • '));
+      }
+    }
+  }, [movieInfo]);
 
   // Cleanup polling on unmount
   useEffect(() => {
@@ -499,7 +529,7 @@ const TranslationPanel = () => {
 
           <div>
             <label className="text-sm font-medium text-foreground mb-2 block">
-              Contexto (opcional)
+              Contexto {movieInfo && '(Auto-preenchido do TMDB)'}
             </label>
             <Input
               placeholder="Ex: Dune Part Two - Ficção científica"
@@ -507,6 +537,11 @@ const TranslationPanel = () => {
               onChange={(e) => setContext(e.target.value)}
               disabled={isUploading}
             />
+            {movieInfo && (
+              <p className="text-xs text-muted-foreground mt-1">
+                ✨ Descrição preenchida automaticamente do filme reconhecido
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
