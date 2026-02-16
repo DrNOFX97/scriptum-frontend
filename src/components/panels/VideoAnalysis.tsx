@@ -10,6 +10,7 @@ import { useFileContext, type Subtitle } from "@/contexts/FileContext";
 import { parseSubtitleLanguage, getSubtitleBadges, toISO6391 } from "@/lib/subtitleLanguages";
 import { analyzeVideoLocally } from "@/lib/videoAnalyzer";
 import { extractAllSubtitles } from "@/lib/subtitleExtractor";
+import { ensureCompatibleAudio } from "@/lib/audioConverter";
 
 import { API_BASE } from "@/lib/constants";
 
@@ -181,8 +182,44 @@ const VideoAnalysis = () => {
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setVideoFile(file); // Guarda no contexto
-      await analyzeVideo(file);
+      // Check and convert audio if needed (AC3 → AAC for browser compatibility)
+      try {
+        setIsProcessing(true);
+        setProcessingOperation("A verificar compatibilidade de áudio...");
+
+        const result = await ensureCompatibleAudio(file, (progress, message) => {
+          setProcessingOperation(message);
+        });
+
+        if (result.converted) {
+          toast({
+            title: "🔊 Áudio convertido",
+            description: `${result.audioInfo?.codec.toUpperCase()} → AAC para compatibilidade com navegador`,
+          });
+
+          // Use converted file
+          setVideoFile(result.file);
+          await analyzeVideo(result.file);
+        } else {
+          // Use original file
+          setVideoFile(file);
+          await analyzeVideo(file);
+        }
+      } catch (err) {
+        console.error('Audio conversion failed:', err);
+        toast({
+          variant: "destructive",
+          title: "Aviso: Áudio pode não funcionar",
+          description: "Não foi possível converter o áudio. O vídeo pode não ter som no navegador.",
+        });
+
+        // Continue with original file anyway
+        setVideoFile(file);
+        await analyzeVideo(file);
+      } finally {
+        setIsProcessing(false);
+        setProcessingOperation("");
+      }
     }
   };
 
