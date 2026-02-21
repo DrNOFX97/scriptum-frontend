@@ -1,0 +1,228 @@
+/* Mobile-First Optimizations for Scriptum v2.5 */
+
+/* Safe Area Support (iOS notch, etc) */
+:root {
+  --safe-area-inset-top: env(safe-area-inset-top, 0);
+  --safe-area-inset-right: env(safe-area-inset-right, 0);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0);
+  --safe-area-inset-left: env(safe-area-inset-left, 0);
+}
+
+.safe-area-top {
+  padding-top: var(--safe-area-inset-top);
+}
+
+.safe-area-bottom {
+  padding-bottom: var(--safe-area-inset-bottom);
+}
+
+.safe-area-left {
+  padding-left: var(--safe-area-inset-left);
+}
+
+.safe-area-right {
+  padding-right: var(--safe-area-inset-right);
+}
+
+.safe-area-inset {
+  padding-top: var(--safe-area-inset-top);
+  padding-bottom: var(--safe-area-inset-bottom);
+  padding-left: var(--safe-area-inset-left);
+  padding-right: var(--safe-area-inset-right);
+}
+
+/* Touch Optimization */
+.touch-manipulation {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
+/* Smooth Scrolling */
+html {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Hide Scrollbars on Mobile (but keep functionality) */
+@media (max-width: 768px) {
+  ::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    background: transparent;
+  }
+
+  /* But show thin scrollbars when actively scrolling */
+  *:hover::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  *:hover::-webkit-scrollbar-thumb {
+    background: rgba(var(--foreground-rgb), 0.3);
+    border-radius: 2px;
+  }
+}
+
+/* Pull-to-Refresh Override (prevent on scroll containers) */
+.no-pull-refresh {
+  overscroll-behavior-y: contain;
+}
+
+/* Card Stack Animation */
+@keyframes card-stack-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.card-stack-item {
+  animation: card-stack-in 0.3s ease-out backwards;
+}
+
+.card-stack-item:nth-child(1) { animation-delay: 0ms; }
+.card-stack-item:nth-child(2) { animation-delay: 50ms; }
+.card-stack-item:nth-child(3) { animation-delay: 100ms; }
+.card-stack-item:nth-child(4) { animation-delay: 150ms; }
+.card-stack-item:nth-child(5) { animation-delay: 200ms; }
+
+/* Bottom Sheet/Modal Animations */
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-backdrop {
+  animation: fade-in 0.2s ease-out;
+}
+
+.modal-sheet {
+  animation: slide-up 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* Loading Skeleton */
+@keyframes skeleton-loading {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted)) 0%,
+    hsl(var(--muted) / 0.6) 50%,
+    hsl(var(--muted)) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+}
+
+/* Haptic Feedback Helper */
+.haptic-light {
+  transition: transform 0.1s;
+}
+
+.haptic-light:active {
+  transform: scale(0.97);
+}
+
+.haptic-medium {
+  transition: transform 0.15s;
+}
+
+.haptic-medium:active {
+  transform: scale(0.95);
+}
+
+.haptic-heavy {
+  transition: transform 0.2s;
+}
+
+.haptic-heavy:active {
+  transform: scale(0.92);
+}
+
+/* Floating Action Button */
+.fab {
+  position: fixed;
+  bottom: calc(4rem + var(--safe-area-inset-bottom));
+  right: 1rem;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15),
+              0 0 0 1px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s, box-shadow 0.2s;
+  z-index: 40;
+}
+
+.fab:active {
+  transform: scale(0.9);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+@media (min-width: 768px) {
+  .fab {
+    bottom: 2rem;
+    right: 2rem;
+  }
+}
+
+/* Progress Bar Smooth */
+.progress-smooth {
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Swipe Indicator */
+.swipe-indicator {
+  position: relative;
+}
+
+.swipe-indicator::before {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 4px;
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 2px;
+}
+
+/* Empty State */
+.empty-state {
+  padding: 3rem 1.5rem;
+  text-align: center;
+  color: hsl(var(--muted-foreground));
+}
+
+.empty-state-icon {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 1rem;
+  opacity: 0.5;
+}
