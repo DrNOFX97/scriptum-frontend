@@ -1,6 +1,7 @@
 import { ReactNode, useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
 import { BottomNav } from "@/components/mobile/BottomNav";
+import { useScrollDirection } from "@/hooks/useScrollDirection";
 import { cn } from "@/lib/utils";
 
 interface ResponsiveLayoutProps {
@@ -18,6 +19,7 @@ export const ResponsiveLayout = ({
 }: ResponsiveLayoutProps) => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const scrollDirection = useScrollDirection({ threshold: 20, debounce: 50 });
 
   useEffect(() => {
     const checkMobile = () => {
@@ -29,10 +31,18 @@ export const ResponsiveLayout = ({
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
+  // Hide header when scrolling down, show when scrolling up
+  const isHeaderVisible = scrollDirection !== "down";
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Mobile Header */}
-      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-lg border-b border-border md:hidden">
+      {/* Mobile Header with auto-hide */}
+      <header
+        className={cn(
+          "sticky top-0 z-40 bg-background/95 backdrop-blur-lg border-b border-border md:hidden transition-transform duration-300",
+          isHeaderVisible ? "translate-y-0" : "-translate-y-full"
+        )}
+      >
         <div className="flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
@@ -44,7 +54,7 @@ export const ResponsiveLayout = ({
           {sidebar && (
             <button
               onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-              className="p-2 rounded-lg hover:bg-muted active:scale-95 transition-all"
+              className="p-2 rounded-lg hover:bg-muted active:scale-95 transition-all touch-manipulation"
             >
               {isMobileSidebarOpen ? (
                 <X className="h-5 w-5" />
