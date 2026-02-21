@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code - Scriptum Mobile</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 450px;
+            width: 100%;
+        }
+
+        .icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 32px;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 32px;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 32px;
+            font-size: 16px;
+        }
+
+        .qr-wrapper {
+            background: #f9f9f9;
+            padding: 24px;
+            border-radius: 16px;
+            margin-bottom: 24px;
+            display: inline-block;
+        }
+
+        .qr-code {
+            width: 100%;
+            max-width: 300px;
+            height: auto;
+            display: block;
+        }
+
+        .url {
+            background: #f5f5f5;
+            padding: 16px;
+            border-radius: 12px;
+            margin: 24px 0;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-size: 14px;
+            word-break: break-all;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .features {
+            text-align: left;
+            background: #f9f9f9;
+            padding: 24px;
+            border-radius: 16px;
+            margin: 24px 0;
+        }
+
+        .features h3 {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .feature-item:last-child {
+            border-bottom: none;
+        }
+
+        .feature-icon {
+            font-size: 20px;
+            width: 32px;
+            text-align: center;
+        }
+
+        .feature-text {
+            flex: 1;
+            font-size: 14px;
+            color: #555;
+        }
+
+        .instructions {
+            text-align: left;
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 24px;
+        }
+
+        .instructions h3 {
+            color: #856404;
+            font-size: 16px;
+            margin-bottom: 12px;
+        }
+
+        .instructions ol {
+            margin: 0;
+            padding-left: 20px;
+            color: #856404;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        .platform-section {
+            background: #e3f2fd;
+            border: 2px solid #2196f3;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 16px;
+            text-align: left;
+        }
+
+        .platform-section h4 {
+            color: #1565c0;
+            font-size: 15px;
+            margin-bottom: 10px;
+        }
+
+        .platform-section ol {
+            margin: 0;
+            padding-left: 20px;
+            color: #1565c0;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 14px 32px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 16px;
+            margin-top: 24px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        @media print {
+            body {
+                background: white;
+            }
+            .container {
+                box-shadow: none;
+                max-width: 100%;
+            }
+            .button {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">📱</div>
+
+        <h1>Scriptum Mobile</h1>
+        <p class="subtitle">Escaneie para abrir no celular</p>
+
+        <div class="qr-wrapper">
+            <img
+                class="qr-code"
+                src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=https://scriptum-v2-50.web.app&color=667eea"
+                alt="QR Code Scriptum"
+            >
+        </div>
+
+        <div class="url">
+            https://scriptum-v2-50.web.app
+        </div>
+
+        <div class="features">
+            <h3>✨ Features</h3>
+            <ul class="feature-list">
+                <li class="feature-item">
+                    <span class="feature-icon">⚡</span>
+                    <span class="feature-text"><strong>Upload Paralelo</strong> - 8x mais rápido</span>
+                </li>
+                <li class="feature-item">
+                    <span class="feature-icon">🎯</span>
+                    <span class="feature-text"><strong>MLX Whisper</strong> - Sync inteligente</span>
+                </li>
+                <li class="feature-item">
+                    <span class="feature-icon">🌐</span>
+                    <span class="feature-text"><strong>Tradução IA</strong> - Gemini powered</span>
+                </li>
+                <li class="feature-item">
+                    <span class="feature-icon">📱</span>
+                    <span class="feature-text"><strong>PWA</strong> - Instalável como app</span>
+                </li>
+            </ul>
+        </div>
+
+        <div class="instructions">
+            <h3>📲 Como escanear:</h3>
+            <ol>
+                <li>Abra a <strong>câmera</strong> do celular</li>
+                <li>Aponte para o <strong>QR code</strong> acima</li>
+                <li>Toque na <strong>notificação</strong> que aparecer</li>
+                <li>O Scriptum abrirá no navegador!</li>
+            </ol>
+        </div>
+
+        <div class="platform-section">
+            <h4>📱 iOS (iPhone/iPad)</h4>
+            <ol>
+                <li>Abra no <strong>Safari</strong></li>
+                <li>Toque em <strong>Compartilhar</strong> (quadrado com seta)</li>
+                <li>Selecione <strong>"Adicionar à Tela Inicial"</strong></li>
+                <li>Confirme - agora é um app! 🎉</li>
+            </ol>
+        </div>
+
+        <div class="platform-section">
+            <h4>🤖 Android</h4>
+            <ol>
+                <li>Abra no <strong>Chrome</strong></li>
+                <li>Toque no <strong>menu</strong> (⋮) no canto superior</li>
+                <li>Selecione <strong>"Adicionar à tela inicial"</strong></li>
+                <li>Confirme - agora é um app! 🎉</li>
+            </ol>
+        </div>
+
+        <a href="/" class="button">🚀 Abrir Scriptum</a>
+
+        <p style="margin-top: 32px; color: #999; font-size: 13px;">
+            💡 Dica: Imprima esta página (Ctrl/Cmd + P) para uso futuro
+        </p>
+    </div>
+</body>
+</html>
