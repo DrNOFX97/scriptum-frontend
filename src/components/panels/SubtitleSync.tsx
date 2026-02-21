@@ -7,7 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useFileContext } from "@/contexts/FileContext";
-import { ensureCompatibleAudio } from "@/lib/audioConverter";
+import { ensureCompatibleAudio, extractAudioToAAC, detectAudioCodec } from "@/lib/audioConverter";
 import { parallelUpload } from "@/lib/parallelUpload";
 
 import { API_BASE } from "@/lib/constants";
@@ -354,11 +354,66 @@ const SubtitleSync = () => {
 
         console.log(`✅ Video uploaded: ${videoPath}`);
 
+        // Check if we need to extract and upload AAC for GCS caching
+        setUploadStatus("A verificar áudio...");
+
+        try {
+          const audioInfo = await detectAudioCodec(vidFile, (progress, msg) => {
+            setUploadStatus(`A analisar áudio: ${msg}`);
+          });
+
+          // If audio needs conversion (AC3, DTS, etc), extract AAC and upload to GCS
+          if (audioInfo && !audioInfo.isCompatible) {
+            const codec = audioInfo.codec.toUpperCase();
+            console.log(`🔊 Audio ${codec} detected - extracting AAC for GCS cache`);
+
+            setUploadStatus(`A extrair áudio ${codec} → AAC...`);
+            toast({
+              title: `🔊 Áudio ${codec} Detectado`,
+              description: "A extrair AAC para cache GCS (mais rápido para futuras sincronizações)",
+            });
+
+            // Extract AAC from video (audio only, no video)
+            const aacFile = await extractAudioToAAC(vidFile, (progress, msg) => {
+              setUploadStatus(`Extração AAC: ${msg} (${progress}%)`);
+              setUploadProgress(progress);
+            });
+
+            console.log(`✅ AAC extracted: ${(aacFile.size / 1024 / 1024).toFixed(1)}MB`);
+
+            // Upload AAC to GCS (same path as video but .aac extension)
+            setUploadStatus("A fazer upload do AAC para GCS...");
+            const aacPath = await parallelUpload(aacFile, {
+              onProgress: (progress) => {
+                setUploadProgress(progress.percentage);
+                const speedMBps = (progress.uploadSpeed / 1024 / 1024).toFixed(1);
+                const uploadedMB = (progress.uploadedBytes / 1024 / 1024).toFixed(0);
+                const totalMB = (progress.totalBytes / 1024 / 1024).toFixed(0);
+
+                setUploadStatus(
+                  `Upload AAC: ${uploadedMB}/${totalMB}MB (${progress.percentage.toFixed(1)}%) @ ${speedMBps} MB/s`
+                );
+              }
+            });
+
+            console.log(`✅ AAC uploaded to GCS: ${aacPath}`);
+            toast({
+              title: "✅ AAC Cache Criado!",
+              description: "Próximas sincronizações serão muito mais rápidas",
+            });
+          } else {
+            console.log(`✅ Audio already compatible (${audioInfo?.codec || 'unknown'}), no AAC extraction needed`);
+          }
+        } catch (audioError) {
+          // Non-critical error - continue with sync even if AAC extraction fails
+          console.warn('AAC extraction failed (non-critical):', audioError);
+        }
+
         setUploadStatus("A iniciar sincronização...");
 
         toast({
-          title: "Upload concluído!",
-          description: "A iniciar sincronização com MLX Whisper",
+          title: "A iniciar sincronização",
+          description: "MLX Whisper vai processar o vídeo",
         });
 
         // Send subtitle file + video path to sync endpoint

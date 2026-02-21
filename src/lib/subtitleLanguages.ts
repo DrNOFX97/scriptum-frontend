@@ -4,90 +4,219 @@ interface LanguageInfo {
   variant?: string;
 }
 
-// Mapeamento de códigos ISO 639-1 (2 letras) e ISO 639-2 (3 letras)
+// ISO 639-1 (2 letras), ISO 639-2/B e ISO 639-2/T (3 letras)
 const languageMap: Record<string, LanguageInfo> = {
-  // Inglês
-  'en': { name: 'Inglês', flag: '🇬🇧' },
-  'eng': { name: 'Inglês', flag: '🇬🇧' },
+  // ── Inglês ──
+  'en':    { name: 'Inglês', flag: '🇬🇧' },
+  'eng':   { name: 'Inglês', flag: '🇬🇧' },
   'en-US': { name: 'Inglês', flag: '🇺🇸', variant: 'EUA' },
   'en-GB': { name: 'Inglês', flag: '🇬🇧', variant: 'Reino Unido' },
   'en-AU': { name: 'Inglês', flag: '🇦🇺', variant: 'Austrália' },
   'en-CA': { name: 'Inglês', flag: '🇨🇦', variant: 'Canadá' },
 
-  // Português
-  'pt': { name: 'Português', flag: '🇵🇹' },
-  'por': { name: 'Português', flag: '🇵🇹' },
+  // ── Português ──
+  'pt':    { name: 'Português', flag: '🇵🇹' },
+  'por':   { name: 'Português', flag: '🇵🇹' },
   'pt-BR': { name: 'Português', flag: '🇧🇷', variant: 'Brasil' },
   'pt-PT': { name: 'Português', flag: '🇵🇹', variant: 'Portugal' },
-  'pb': { name: 'Português', flag: '🇧🇷', variant: 'Brasil' },
-  'pob': { name: 'Português', flag: '🇧🇷', variant: 'Brasil' },
+  'pb':    { name: 'Português', flag: '🇧🇷', variant: 'Brasil' },
+  'pob':   { name: 'Português', flag: '🇧🇷', variant: 'Brasil' },
+  'ptb':   { name: 'Português', flag: '🇧🇷', variant: 'Brasil' },
 
-  // Espanhol
-  'es': { name: 'Espanhol', flag: '🇪🇸' },
-  'spa': { name: 'Espanhol', flag: '🇪🇸' },
+  // ── Espanhol ──
+  'es':    { name: 'Espanhol', flag: '🇪🇸' },
+  'spa':   { name: 'Espanhol', flag: '🇪🇸' },
   'es-ES': { name: 'Espanhol', flag: '🇪🇸', variant: 'Espanha' },
   'es-MX': { name: 'Espanhol', flag: '🇲🇽', variant: 'México' },
   'es-AR': { name: 'Espanhol', flag: '🇦🇷', variant: 'Argentina' },
-  'es-419': { name: 'Espanhol', flag: '🌎', variant: 'América Latina' },
+  'es-419':{ name: 'Espanhol', flag: '🌎', variant: 'América Latina' },
 
-  // Francês
-  'fr': { name: 'Francês', flag: '🇫🇷' },
-  'fre': { name: 'Francês', flag: '🇫🇷' },
-  'fra': { name: 'Francês', flag: '🇫🇷' },
+  // ── Francês ──
+  'fr':    { name: 'Francês', flag: '🇫🇷' },
+  'fre':   { name: 'Francês', flag: '🇫🇷' },
+  'fra':   { name: 'Francês', flag: '🇫🇷' },
   'fr-FR': { name: 'Francês', flag: '🇫🇷', variant: 'França' },
   'fr-CA': { name: 'Francês', flag: '🇨🇦', variant: 'Canadá' },
+  'fr-BE': { name: 'Francês', flag: '🇧🇪', variant: 'Bélgica' },
 
-  // Alemão
-  'de': { name: 'Alemão', flag: '🇩🇪' },
-  'ger': { name: 'Alemão', flag: '🇩🇪' },
-  'deu': { name: 'Alemão', flag: '🇩🇪' },
+  // ── Alemão ──
+  'de':    { name: 'Alemão', flag: '🇩🇪' },
+  'ger':   { name: 'Alemão', flag: '🇩🇪' },
+  'deu':   { name: 'Alemão', flag: '🇩🇪' },
+  'de-AT': { name: 'Alemão', flag: '🇦🇹', variant: 'Áustria' },
+  'de-CH': { name: 'Alemão', flag: '🇨🇭', variant: 'Suíça' },
 
-  // Italiano
-  'it': { name: 'Italiano', flag: '🇮🇹' },
-  'ita': { name: 'Italiano', flag: '🇮🇹' },
+  // ── Italiano ──
+  'it':    { name: 'Italiano', flag: '🇮🇹' },
+  'ita':   { name: 'Italiano', flag: '🇮🇹' },
 
-  // Russo
-  'ru': { name: 'Russo', flag: '🇷🇺' },
-  'rus': { name: 'Russo', flag: '🇷🇺' },
+  // ── Russo ──
+  'ru':    { name: 'Russo', flag: '🇷🇺' },
+  'rus':   { name: 'Russo', flag: '🇷🇺' },
 
-  // Chinês
-  'zh': { name: 'Chinês', flag: '🇨🇳' },
-  'chi': { name: 'Chinês', flag: '🇨🇳' },
-  'zho': { name: 'Chinês', flag: '🇨🇳' },
+  // ── Chinês ──
+  'zh':    { name: 'Chinês', flag: '🇨🇳' },
+  'chi':   { name: 'Chinês', flag: '🇨🇳' },
+  'zho':   { name: 'Chinês', flag: '🇨🇳' },
   'zh-CN': { name: 'Chinês', flag: '🇨🇳', variant: 'Simplificado' },
   'zh-TW': { name: 'Chinês', flag: '🇹🇼', variant: 'Tradicional' },
   'zh-HK': { name: 'Chinês', flag: '🇭🇰', variant: 'Hong Kong' },
+  'zhs':   { name: 'Chinês', flag: '🇨🇳', variant: 'Simplificado' },
+  'zht':   { name: 'Chinês', flag: '🇹🇼', variant: 'Tradicional' },
 
-  // Japonês
-  'ja': { name: 'Japonês', flag: '🇯🇵' },
-  'jpn': { name: 'Japonês', flag: '🇯🇵' },
+  // ── Japonês ──
+  'ja':    { name: 'Japonês', flag: '🇯🇵' },
+  'jpn':   { name: 'Japonês', flag: '🇯🇵' },
 
-  // Árabe
-  'ar': { name: 'Árabe', flag: '🇸🇦' },
-  'ara': { name: 'Árabe', flag: '🇸🇦' },
+  // ── Árabe ──
+  'ar':    { name: 'Árabe', flag: '🇸🇦' },
+  'ara':   { name: 'Árabe', flag: '🇸🇦' },
 
-  // Outros idiomas comuns
-  'ko': { name: 'Coreano', flag: '🇰🇷' },
-  'kor': { name: 'Coreano', flag: '🇰🇷' },
-  'nl': { name: 'Holandês', flag: '🇳🇱' },
-  'dut': { name: 'Holandês', flag: '🇳🇱' },
-  'nld': { name: 'Holandês', flag: '🇳🇱' },
-  'sv': { name: 'Sueco', flag: '🇸🇪' },
-  'swe': { name: 'Sueco', flag: '🇸🇪' },
-  'no': { name: 'Norueguês', flag: '🇳🇴' },
-  'nor': { name: 'Norueguês', flag: '🇳🇴' },
-  'da': { name: 'Dinamarquês', flag: '🇩🇰' },
-  'dan': { name: 'Dinamarquês', flag: '🇩🇰' },
-  'fi': { name: 'Finlandês', flag: '🇫🇮' },
-  'fin': { name: 'Finlandês', flag: '🇫🇮' },
-  'pl': { name: 'Polaco', flag: '🇵🇱' },
-  'pol': { name: 'Polaco', flag: '🇵🇱' },
-  'tr': { name: 'Turco', flag: '🇹🇷' },
-  'tur': { name: 'Turco', flag: '🇹🇷' },
-  'he': { name: 'Hebraico', flag: '🇮🇱' },
-  'heb': { name: 'Hebraico', flag: '🇮🇱' },
-  'hi': { name: 'Hindi', flag: '🇮🇳' },
-  'hin': { name: 'Hindi', flag: '🇮🇳' },
+  // ── Coreano ──
+  'ko':    { name: 'Coreano', flag: '🇰🇷' },
+  'kor':   { name: 'Coreano', flag: '🇰🇷' },
+
+  // ── Holandês ──
+  'nl':    { name: 'Holandês', flag: '🇳🇱' },
+  'dut':   { name: 'Holandês', flag: '🇳🇱' },
+  'nld':   { name: 'Holandês', flag: '🇳🇱' },
+  'nl-BE': { name: 'Holandês', flag: '🇧🇪', variant: 'Bélgica' },
+
+  // ── Sueco ──
+  'sv':    { name: 'Sueco', flag: '🇸🇪' },
+  'swe':   { name: 'Sueco', flag: '🇸🇪' },
+
+  // ── Norueguês ──
+  'no':    { name: 'Norueguês', flag: '🇳🇴' },
+  'nor':   { name: 'Norueguês', flag: '🇳🇴' },
+  'nob':   { name: 'Norueguês', flag: '🇳🇴', variant: 'Bokmål' },
+  'nno':   { name: 'Norueguês', flag: '🇳🇴', variant: 'Nynorsk' },
+  'nb':    { name: 'Norueguês', flag: '🇳🇴', variant: 'Bokmål' },
+  'nn':    { name: 'Norueguês', flag: '🇳🇴', variant: 'Nynorsk' },
+
+  // ── Dinamarquês ──
+  'da':    { name: 'Dinamarquês', flag: '🇩🇰' },
+  'dan':   { name: 'Dinamarquês', flag: '🇩🇰' },
+
+  // ── Finlandês ──
+  'fi':    { name: 'Finlandês', flag: '🇫🇮' },
+  'fin':   { name: 'Finlandês', flag: '🇫🇮' },
+
+  // ── Polaco ──
+  'pl':    { name: 'Polaco', flag: '🇵🇱' },
+  'pol':   { name: 'Polaco', flag: '🇵🇱' },
+
+  // ── Turco ──
+  'tr':    { name: 'Turco', flag: '🇹🇷' },
+  'tur':   { name: 'Turco', flag: '🇹🇷' },
+
+  // ── Hebraico ──
+  'he':    { name: 'Hebraico', flag: '🇮🇱' },
+  'heb':   { name: 'Hebraico', flag: '🇮🇱' },
+  'iw':    { name: 'Hebraico', flag: '🇮🇱' },
+
+  // ── Hindi ──
+  'hi':    { name: 'Hindi', flag: '🇮🇳' },
+  'hin':   { name: 'Hindi', flag: '🇮🇳' },
+
+  // ── Búlgaro ──
+  'bg':    { name: 'Búlgaro', flag: '🇧🇬' },
+  'bul':   { name: 'Búlgaro', flag: '🇧🇬' },
+
+  // ── Checo ──
+  'cs':    { name: 'Checo', flag: '🇨🇿' },
+  'cze':   { name: 'Checo', flag: '🇨🇿' },
+  'ces':   { name: 'Checo', flag: '🇨🇿' },
+
+  // ── Estoniano ──
+  'et':    { name: 'Estoniano', flag: '🇪🇪' },
+  'est':   { name: 'Estoniano', flag: '🇪🇪' },
+
+  // ── Grego ──
+  'el':    { name: 'Grego', flag: '🇬🇷' },
+  'gre':   { name: 'Grego', flag: '🇬🇷' },
+  'ell':   { name: 'Grego', flag: '🇬🇷' },
+
+  // ── Croata ──
+  'hr':    { name: 'Croata', flag: '🇭🇷' },
+  'hrv':   { name: 'Croata', flag: '🇭🇷' },
+
+  // ── Húngaro ──
+  'hu':    { name: 'Húngaro', flag: '🇭🇺' },
+  'hun':   { name: 'Húngaro', flag: '🇭🇺' },
+
+  // ── Indonésio ──
+  'id':    { name: 'Indonésio', flag: '🇮🇩' },
+  'ind':   { name: 'Indonésio', flag: '🇮🇩' },
+
+  // ── Lituano ──
+  'lt':    { name: 'Lituano', flag: '🇱🇹' },
+  'lit':   { name: 'Lituano', flag: '🇱🇹' },
+
+  // ── Letão ──
+  'lv':    { name: 'Letão', flag: '🇱🇻' },
+  'lav':   { name: 'Letão', flag: '🇱🇻' },
+
+  // ── Macedónio ──
+  'mk':    { name: 'Macedónio', flag: '🇲🇰' },
+  'mac':   { name: 'Macedónio', flag: '🇲🇰' },
+  'mkd':   { name: 'Macedónio', flag: '🇲🇰' },
+
+  // ── Romeno ──
+  'ro':    { name: 'Romeno', flag: '🇷🇴' },
+  'rum':   { name: 'Romeno', flag: '🇷🇴' },
+  'ron':   { name: 'Romeno', flag: '🇷🇴' },
+
+  // ── Eslovaco ──
+  'sk':    { name: 'Eslovaco', flag: '🇸🇰' },
+  'slo':   { name: 'Eslovaco', flag: '🇸🇰' },
+  'slk':   { name: 'Eslovaco', flag: '🇸🇰' },
+
+  // ── Esloveno ──
+  'sl':    { name: 'Esloveno', flag: '🇸🇮' },
+  'slv':   { name: 'Esloveno', flag: '🇸🇮' },
+
+  // ── Sérvio ──
+  'sr':    { name: 'Sérvio', flag: '🇷🇸' },
+  'srp':   { name: 'Sérvio', flag: '🇷🇸' },
+  'sr-Latn': { name: 'Sérvio', flag: '🇷🇸', variant: 'Latino' },
+  'sr-Cyrl': { name: 'Sérvio', flag: '🇷🇸', variant: 'Cirílico' },
+
+  // ── Tailandês ──
+  'th':    { name: 'Tailandês', flag: '🇹🇭' },
+  'tha':   { name: 'Tailandês', flag: '🇹🇭' },
+
+  // ── Malaio ──
+  'ms':    { name: 'Malaio', flag: '🇲🇾' },
+  'may':   { name: 'Malaio', flag: '🇲🇾' },
+  'msa':   { name: 'Malaio', flag: '🇲🇾' },
+
+  // ── Ucraniano ──
+  'uk':    { name: 'Ucraniano', flag: '🇺🇦' },
+  'ukr':   { name: 'Ucraniano', flag: '🇺🇦' },
+
+  // ── Vietnamita ──
+  'vi':    { name: 'Vietnamita', flag: '🇻🇳' },
+  'vie':   { name: 'Vietnamita', flag: '🇻🇳' },
+
+  // ── Catalão ──
+  'ca':    { name: 'Catalão', flag: '🇪🇸' },
+  'cat':   { name: 'Catalão', flag: '🇪🇸' },
+
+  // ── Romanche ──
+  'ro-MD': { name: 'Romeno', flag: '🇲🇩', variant: 'Moldávia' },
+
+  // ── Tamil ──
+  'ta':    { name: 'Tamil', flag: '🇮🇳' },
+  'tam':   { name: 'Tamil', flag: '🇮🇳' },
+
+  // ── Telugu ──
+  'te':    { name: 'Telugu', flag: '🇮🇳' },
+  'tel':   { name: 'Telugu', flag: '🇮🇳' },
+
+  // ── Bengali ──
+  'bn':    { name: 'Bengali', flag: '🇧🇩' },
+  'ben':   { name: 'Bengali', flag: '🇧🇩' },
 };
 
 interface SubtitleInfo {
@@ -101,93 +230,89 @@ interface SubtitleInfo {
 }
 
 export function parseSubtitleLanguage(languageCode: string): SubtitleInfo {
-  // Normalizar o código
-  const normalizedCode = languageCode.toLowerCase().trim();
+  const raw = languageCode.trim();
 
-  // Detectar legendas especiais
-  const isSDH = /sdh|deaf|hard.?of.?hearing/i.test(languageCode);
-  const isForced = /forced|signs?.?only/i.test(languageCode);
-  const isCC = /cc|closed.?caption/i.test(languageCode);
+  // ── Marcadores especiais (testados no raw completo) ──
+  const isSDH    = /sdh|deaf|hard.?of.?hearing/i.test(raw);
+  const isForced = /forced|signs?.?only/i.test(raw);
+  const isCC     = /\bcc\b|closed.?caption/i.test(raw);
 
-  // Detectar variantes regionais nos títulos
-  const isBrazilian = /brazil(ian)?|brasil/i.test(languageCode);
-  const isPortugal = /portugal|european.*port/i.test(languageCode);
-  const isLatinAmerican = /latin.?american|latam|419/i.test(languageCode);
-  const isSpanish = /spain|castilian|european.*spa/i.test(languageCode);
-  const isUS = /\b(us|usa|american)\b/i.test(languageCode);
-  const isUK = /\b(uk|british|gb)\b/i.test(languageCode);
-  const isCanadian = /canad(a|ian)/i.test(languageCode);
-  const isSimplified = /simplified|简|cn/i.test(languageCode);
-  const isTraditional = /traditional|繁|tw|hk/i.test(languageCode);
+  // ── Extrair código de idioma ──
+  // O input pode ser "eng", "pt-BR", "eng English #1", "por Portuguese (Brazil)", etc.
+  // Quando há espaço, a primeira palavra (2-4 chars) é sempre o código ISO.
+  const tokens = raw.split(/\s+/);
+  const firstToken = tokens[0].toLowerCase();
+  const isCodePrefix = /^[a-z]{2,4}(-[a-z]{2})?$/i.test(firstToken);
 
-  // Extrair código de idioma base (remover sufixos e títulos)
-  let cleanCode = normalizedCode
-    .replace(/[\s\-_]*(sdh|deaf|hard.?of.?hearing|forced|signs?.?only|cc|closed.?caption)[\s\-_]*/gi, '')
-    .replace(/[\s\-_]*(brazil(ian)?|brasil|portugal|latin.?american|latam|european|american|british|canadian|simplified|traditional)[\s\-_]*/gi, '')
-    .trim();
+  // cleanCode = só o código ISO (sem o texto do título)
+  let cleanCode = isCodePrefix ? firstToken : raw.toLowerCase();
 
-  // Tentar encontrar no mapa com código completo primeiro
+  // normalizar variante: pt-br → pt-BR
+  if (cleanCode.includes('-')) {
+    const [base, region] = cleanCode.split('-');
+    cleanCode = `${base}-${region.toUpperCase()}`;
+  }
+
+  // Texto completo para detetar variantes (inclui título como "Portuguese (Brazil)")
+  const fullText = raw;
+
+  // ── Variantes regionais (detetadas no texto completo) ──
+  const isBrazilian    = /brazil(ian)?|brasil/i.test(fullText);
+  const isPortugal     = /\bportugal\b|european.*port/i.test(fullText);
+  const isLatinAmerican= /latin.?am(erica)?|latam|\b419\b/i.test(fullText);
+  const isSpain        = /\bspain\b|castilian|european.*spa/i.test(fullText);
+  const isUS           = /\b(us|usa|american)\b/i.test(fullText);
+  const isUK           = /\b(uk|british|gb)\b/i.test(fullText);
+  const isCanadian     = /canad(a|ian)/i.test(fullText);
+  const isSimplified   = /simplified|简体|简|\bcn\b/i.test(fullText);
+  const isTraditional  = /traditional|繁體|繁|\btw\b|\bhk\b/i.test(fullText);
+  const isBokmaal      = /bokm[aå]l|\bnb\b/i.test(fullText);
+  const isNynorsk      = /nynorsk|\bnn\b/i.test(fullText);
+
+  // ── Lookup ──
   let langInfo = languageMap[cleanCode];
 
-  // Se não encontrar, tentar com apenas os primeiros 2 caracteres
-  if (!langInfo) {
-    const shortCode = cleanCode.substring(0, 2);
-    langInfo = languageMap[shortCode];
+  // Tentar sem região (pt-BR → pt)
+  if (!langInfo && cleanCode.includes('-')) {
+    langInfo = languageMap[cleanCode.split('-')[0]];
   }
 
-  // Se ainda não encontrar, tentar código de 3 letras
-  if (!langInfo) {
-    const code3 = cleanCode.substring(0, 3);
-    langInfo = languageMap[code3];
-  }
-
-  // Ajustar baseado em variantes detectadas nos títulos
+  // ── Ajuste de variante ──
   if (langInfo) {
-    const baseName = langInfo.name;
-
-    if (baseName === 'Português') {
-      if (isBrazilian) {
-        langInfo = { name: 'Português', flag: '🇧🇷', variant: 'Brasil' };
-      } else if (isPortugal) {
-        langInfo = { name: 'Português', flag: '🇵🇹', variant: 'Portugal' };
-      }
-    } else if (baseName === 'Espanhol') {
-      if (isLatinAmerican) {
-        langInfo = { name: 'Espanhol', flag: '🌎', variant: 'América Latina' };
-      } else if (isSpanish) {
-        langInfo = { name: 'Espanhol', flag: '🇪🇸', variant: 'Espanha' };
-      }
-    } else if (baseName === 'Inglês') {
-      if (isUS) {
-        langInfo = { name: 'Inglês', flag: '🇺🇸', variant: 'EUA' };
-      } else if (isUK) {
-        langInfo = { name: 'Inglês', flag: '🇬🇧', variant: 'Reino Unido' };
-      } else if (isCanadian) {
-        langInfo = { name: 'Inglês', flag: '🇨🇦', variant: 'Canadá' };
-      }
-    } else if (baseName === 'Chinês') {
-      if (isSimplified) {
-        langInfo = { name: 'Chinês', flag: '🇨🇳', variant: 'Simplificado' };
-      } else if (isTraditional) {
-        langInfo = { name: 'Chinês', flag: '🇹🇼', variant: 'Tradicional' };
-      }
-    } else if (baseName === 'Francês') {
-      if (isCanadian) {
-        langInfo = { name: 'Francês', flag: '🇨🇦', variant: 'Canadá' };
-      }
+    const base = langInfo.name;
+    if (base === 'Português') {
+      if (isBrazilian)        langInfo = { name: 'Português', flag: '🇧🇷', variant: 'Brasil' };
+      else if (isPortugal)    langInfo = { name: 'Português', flag: '🇵🇹', variant: 'Portugal' };
+    } else if (base === 'Espanhol') {
+      if (isLatinAmerican)    langInfo = { name: 'Espanhol', flag: '🌎', variant: 'América Latina' };
+      else if (isSpain)       langInfo = { name: 'Espanhol', flag: '🇪🇸', variant: 'Espanha' };
+    } else if (base === 'Inglês') {
+      if (isUS)               langInfo = { name: 'Inglês', flag: '🇺🇸', variant: 'EUA' };
+      else if (isUK)          langInfo = { name: 'Inglês', flag: '🇬🇧', variant: 'Reino Unido' };
+      else if (isCanadian)    langInfo = { name: 'Inglês', flag: '🇨🇦', variant: 'Canadá' };
+    } else if (base === 'Chinês') {
+      if (isSimplified)       langInfo = { name: 'Chinês', flag: '🇨🇳', variant: 'Simplificado' };
+      else if (isTraditional) langInfo = { name: 'Chinês', flag: '🇹🇼', variant: 'Tradicional' };
+    } else if (base === 'Francês') {
+      if (isCanadian)         langInfo = { name: 'Francês', flag: '🇨🇦', variant: 'Canadá' };
+    } else if (base === 'Norueguês') {
+      if (isBokmaal)          langInfo = { name: 'Norueguês', flag: '🇳🇴', variant: 'Bokmål' };
+      else if (isNynorsk)     langInfo = { name: 'Norueguês', flag: '🇳🇴', variant: 'Nynorsk' };
     }
   }
 
-  // Fallback para código desconhecido
+  // ── Fallback ──
   if (!langInfo) {
-    langInfo = { name: languageCode, flag: '🌐' };
+    langInfo = { name: cleanCode.toUpperCase(), flag: '🌐' };
   }
 
-  // Construir nome de exibição
-  let displayName = langInfo.name;
-  if (langInfo.variant) {
-    displayName += ` (${langInfo.variant})`;
-  }
+  // ── Nome de exibição ──
+  // Se o título original contém numeração (#1, #2, etc.), inclui-a
+  const numSuffix = fullText.match(/#\s*\d+/)?.[0] ?? '';
+  let displayName = langInfo.variant
+    ? `${langInfo.name} (${langInfo.variant})`
+    : langInfo.name;
+  if (numSuffix) displayName += ` ${numSuffix}`;
 
   return {
     displayName,
@@ -202,71 +327,40 @@ export function parseSubtitleLanguage(languageCode: string): SubtitleInfo {
 
 export function getSubtitleBadges(info: SubtitleInfo): string[] {
   const badges: string[] = [];
-
-  if (info.isSDH) badges.push('SDH');
+  if (info.isSDH)    badges.push('SDH');
   if (info.isForced) badges.push('Forçada');
-  if (info.isCC) badges.push('CC');
-
+  if (info.isCC)     badges.push('CC');
   return badges;
 }
 
 /**
- * Convert any language code to BCP 47 format for HTML5 video track
- * Preserves language variants (pt-BR, en-US, etc.) and converts 3-letter codes to 2-letter
- * @param languageCode - Language code (can be 2-letter, 3-letter, or with variants)
- * @returns BCP 47 code like 'pt', 'pt-BR', 'en', 'en-US', etc.
+ * Converte qualquer código de idioma para BCP 47 (para HTML5 <track>).
  */
 export function toISO6391(languageCode: string): string {
-  // Normalize
-  const trimmedCode = languageCode.trim();
-
-  // Split into language and region (if present)
-  const parts = trimmedCode.split('-');
+  const parts = languageCode.trim().split('-');
   const baseLang = parts[0].toLowerCase();
-  const region = parts[1]?.toUpperCase(); // Keep region code (BR, PT, US, GB, etc.)
+  const region   = parts[1]?.toUpperCase();
 
-  // Map 3-letter codes to 2-letter codes
   const iso6392to1: Record<string, string> = {
-    'eng': 'en',
-    'por': 'pt',
-    'spa': 'es',
-    'fre': 'fr',
-    'fra': 'fr',
-    'ger': 'de',
-    'deu': 'de',
-    'ita': 'it',
-    'rus': 'ru',
-    'chi': 'zh',
-    'zho': 'zh',
-    'jpn': 'ja',
-    'ara': 'ar',
-    'kor': 'ko',
-    'dut': 'nl',
-    'nld': 'nl',
-    'swe': 'sv',
-    'nor': 'no',
-    'dan': 'da',
-    'fin': 'fi',
-    'pol': 'pl',
-    'tur': 'tr',
-    'heb': 'he',
-    'hin': 'hi',
-    'pob': 'pt', // Portuguese (Brazil) alternative code
-    'pb': 'pt',  // Portuguese (Brazil) alternative code
+    'eng': 'en', 'por': 'pt', 'spa': 'es', 'fre': 'fr', 'fra': 'fr',
+    'ger': 'de', 'deu': 'de', 'ita': 'it', 'rus': 'ru', 'chi': 'zh',
+    'zho': 'zh', 'jpn': 'ja', 'ara': 'ar', 'kor': 'ko', 'dut': 'nl',
+    'nld': 'nl', 'swe': 'sv', 'nor': 'no', 'nob': 'nb', 'nno': 'nn',
+    'dan': 'da', 'fin': 'fi', 'pol': 'pl', 'tur': 'tr', 'heb': 'he',
+    'hin': 'hi', 'pob': 'pt', 'pb':  'pt', 'ptb': 'pt',
+    'bul': 'bg', 'cze': 'cs', 'ces': 'cs', 'est': 'et',
+    'gre': 'el', 'ell': 'el', 'hrv': 'hr', 'hun': 'hu', 'ind': 'id',
+    'lit': 'lt', 'lav': 'lv', 'mac': 'mk', 'mkd': 'mk',
+    'rum': 'ro', 'ron': 'ro', 'slo': 'sk', 'slk': 'sk',
+    'slv': 'sl', 'srp': 'sr', 'tha': 'th', 'may': 'ms', 'msa': 'ms',
+    'ukr': 'uk', 'vie': 'vi', 'cat': 'ca', 'tam': 'ta', 'tel': 'te',
+    'ben': 'bn',
   };
 
-  // Convert 3-letter base to 2-letter, or keep if already 2-letter
-  let convertedBase = iso6392to1[baseLang] || baseLang;
+  const converted = iso6392to1[baseLang] || (baseLang.length === 2 ? baseLang : 'und');
 
-  // If base is still not 2 letters and not in our map, default to 'en'
-  if (convertedBase.length !== 2) {
-    convertedBase = 'en';
-  }
-
-  // Reconstruct with region if present
   if (region && region.length === 2) {
-    return `${convertedBase}-${region}`;
+    return `${converted}-${region}`;
   }
-
-  return convertedBase;
+  return converted;
 }

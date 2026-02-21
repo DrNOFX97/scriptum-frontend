@@ -5,3 +5,5 @@
 export { ApiFormCard } from './ApiFormCard';
 export { FileUploadInput } from './FileUploadInput';
 export { ResultsCard, ResultData } from './ResultsCard';
+export { TmdbCard } from './TmdbCard';
+export { OnlineSubtitleResults } from './OnlineSubtitleResults';

@@ -120,68 +120,66 @@ export async function extractSubtitle(
 /**
  * Parse ffmpeg output to detect subtitle tracks
  */
+function normalizeLanguageCode(code: string): string {
+  const parts = code.toLowerCase().split('-');
+  if (parts.length === 2) return `${parts[0]}-${parts[1].toUpperCase()}`;
+  return parts[0];
+}
+
 function parseSubtitleStreams(logs: string[]): Array<{ index: number; language: string; title?: string }> {
   const subtitleStreams: Array<{ index: number; language: string; title?: string; codec?: string }> = [];
   let subtitleIndex = 0;
   let currentStream: { index: number; language: string; title?: string; codec?: string } | null = null;
+  let inMetadata = false;
 
   for (const log of logs) {
-    // Look for subtitle stream lines like:
-    // Stream #0:2(por): Subtitle: subrip
-    // Stream #0:3(eng): Subtitle: ass (default)
-    // Stream #0:4(pt-BR): Subtitle: srt (Brazilian Portuguese)
-    // Stream #0:5(en-US): Subtitle: srt (English - US)
-
-    // Match both 2-letter (pt, en) and 5-letter variants (pt-BR, en-US)
-    const streamMatch = log.match(/Stream #0:(\d+)(?:\(([a-z]{2,3}(?:-[A-Z]{2})?)\))?: Subtitle: (\w+)(.*)/i);
+    // Stream header: Stream #0:2(por): Subtitle: subrip
+    //                Stream #0:3: Subtitle: subrip (no language in header)
+    const streamMatch = log.match(/Stream #\d+:\d+(?:\(([a-z]{2,3}(?:-[A-Z]{2})?)\))?: Subtitle: (\w+)(.*)/i);
 
     if (streamMatch) {
-      // If we had a previous stream, save it
-      if (currentStream) {
-        subtitleStreams.push(currentStream);
-      }
+      if (currentStream) subtitleStreams.push(currentStream);
 
-      let language = streamMatch[2] || 'unk';
-      const codec = streamMatch[3];
-      const rest = streamMatch[4] || '';
+      let language = streamMatch[1] ? normalizeLanguageCode(streamMatch[1]) : 'unk';
+      const codec = streamMatch[2];
+      const rest = streamMatch[3] || '';
 
-      // Normalize language code
-      if (language !== 'unk') {
-        // Convert to lowercase, but keep the country code uppercase
-        // pt-br → pt-BR, en-us → en-US
-        const parts = language.toLowerCase().split('-');
-        if (parts.length === 2) {
-          language = `${parts[0]}-${parts[1].toUpperCase()}`;
-        } else {
-          language = parts[0];
-        }
-      }
-
-      // Look for title in metadata (anything in parentheses after codec)
-      const titleMatch = rest.match(/\(([^)]+)\)/);
-      const title = titleMatch ? titleMatch[1] : undefined;
+      // Title sometimes appears inline: Subtitle: subrip (English)
+      const inlineTitle = rest.match(/\(([^)]+)\)/);
 
       currentStream = {
         index: subtitleIndex++,
         language,
-        title,
-        codec
+        title: inlineTitle?.[1],
+        codec,
       };
+      inMetadata = false;
     }
-    // Look for metadata title on the next lines
-    // Format: "      title           : Brazilian"
-    else if (currentStream && /^\s+title\s+:/i.test(log)) {
-      const metadataTitle = log.split(':')[1]?.trim();
-      if (metadataTitle && metadataTitle !== 'N/A') {
-        currentStream.title = metadataTitle;
+    // Metadata block start
+    else if (currentStream && /^\s+Metadata:/i.test(log)) {
+      inMetadata = true;
+    }
+    // language field in Metadata block: "      language        : por"
+    else if (currentStream && inMetadata && /^\s+language\s*:/i.test(log)) {
+      const value = log.split(':').slice(1).join(':').trim();
+      if (value && value !== 'N/A' && currentStream.language === 'unk') {
+        currentStream.language = normalizeLanguageCode(value);
       }
+    }
+    // title field in Metadata block: "      title           : Brazilian Portuguese"
+    else if (currentStream && inMetadata && /^\s+title\s*:/i.test(log)) {
+      const value = log.split(':').slice(1).join(':').trim();
+      if (value && value !== 'N/A') {
+        currentStream.title = value;
+      }
+    }
+    // Any other stream line resets metadata mode
+    else if (/Stream #/i.test(log) && !/Subtitle/i.test(log)) {
+      inMetadata = false;
     }
   }
 
-  // Don't forget the last stream
-  if (currentStream) {
-    subtitleStreams.push(currentStream);
-  }
+  if (currentStream) subtitleStreams.push(currentStream);
 
   return subtitleStreams;
 }

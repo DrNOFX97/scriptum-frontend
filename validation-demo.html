@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scriptum - Demo de Validação de Qualidade</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white p-8">
+    <div class="max-w-4xl mx-auto space-y-6">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold mb-2">🎬 Scriptum v2.5</h1>
+            <p class="text-gray-400">Sistema de Validação de Qualidade de Legendas</p>
+        </div>
+
+        <!-- Quality Check Card -->
+        <div class="bg-gray-800 rounded-lg border border-gray-700 p-6 space-y-6">
+            <!-- Header -->
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-semibold">Verificação de Qualidade</h3>
+                    <p class="text-sm text-gray-400">1524 legendas analisadas</p>
+                </div>
+                <div class="bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium">
+                    22 problema(s)
+                </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <div class="p-3 bg-red-900/20 rounded">
+                    <div class="text-2xl font-bold text-red-500">4</div>
+                    <div class="text-xs text-gray-400">Tempos longos</div>
+                </div>
+                <div class="p-3 bg-yellow-900/20 rounded">
+                    <div class="text-2xl font-bold text-yellow-500">12</div>
+                    <div class="text-xs text-gray-400">Linhas longas</div>
+                </div>
+                <div class="p-3 bg-orange-900/20 rounded">
+                    <div class="text-2xl font-bold text-orange-500">2</div>
+                    <div class="text-xs text-gray-400">Pausas longas</div>
+                </div>
+                <div class="p-3 bg-purple-900/20 rounded">
+                    <div class="text-2xl font-bold text-purple-500">3</div>
+                    <div class="text-xs text-gray-400">CPS alto</div>
+                </div>
+                <div class="p-3 bg-gray-700/20 rounded">
+                    <div class="text-2xl font-bold text-gray-400">1</div>
+                    <div class="text-xs text-gray-400">Vazias</div>
+                </div>
+            </div>
+
+            <!-- Problems List -->
+            <div class="space-y-3">
+                <h4 class="font-medium text-sm">Problemas Encontrados:</h4>
+
+                <!-- Problem 1: Long Duration (Error) -->
+                <div class="p-4 border border-red-300 bg-red-900/20 rounded-lg">
+                    <div class="flex items-start gap-3">
+                        <svg class="h-5 w-5 text-red-500 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                            <path d="M12 8v4m0 4h.01" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+
+                        <div class="flex-1 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <span class="px-2 py-0.5 bg-gray-700 text-xs font-mono rounded">#456</span>
+                                    <span class="text-xs font-mono text-gray-400">00:09:08,821 --> 00:09:22,740</span>
+                                </div>
+                                <button class="px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded">
+                                    ✏️ Editar
+                                </button>
+                            </div>
+
+                            <div>
+                                <p class="text-sm font-medium">Duração muito longa: 14.2s</p>
+                                <p class="text-xs text-gray-400 mt-1">💡 Dividir em 2+ legendas ou verificar se está correto</p>
+                            </div>
+
+                            <pre class="text-xs bg-black/20 p-2 rounded overflow-x-auto">Todos os índices correlacionados com o arrendamento trimestral
+estimado para o próximo ano estão incluídos.</pre>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Problem 2: Long Line (Warning) -->
+                <div class="p-4 border border-yellow-300 bg-yellow-900/20 rounded-lg">
+                    <div class="flex items-start gap-3">
+                        <svg class="h-5 w-5 text-yellow-500 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+
+                        <div class="flex-1 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <span class="px-2 py-0.5 bg-gray-700 text-xs font-mono rounded">#892</span>
+                                    <span class="text-xs font-mono text-gray-400">00:17:45,220 --> 00:17:49,830</span>
+                                </div>
+                                <button class="px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded">
+                                    ✏️ Editar
+                                </button>
+                            </div>
+
+                            <div>
+                                <p class="text-sm font-medium">Linha muito longa: 58 caracteres</p>
+                                <p class="text-xs text-gray-400 mt-1">💡 Quebrar linha em ponto natural (vírgula, conjunção)</p>
+                            </div>
+
+                            <pre class="text-xs bg-black/20 p-2 rounded overflow-x-auto">Precisamos de completar esta análise antes do final do trimestre</pre>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Problem 3: Long Pause (Warning) -->
+                <div class="p-4 border border-orange-300 bg-orange-900/20 rounded-lg">
+                    <div class="flex items-start gap-3">
+                        <svg class="h-5 w-5 text-orange-500 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+
+                        <div class="flex-1 space-y-2">
+                            <div class="flex items-center gap-2">
+                                <span class="px-2 py-0.5 bg-gray-700 text-xs font-mono rounded">#1424</span>
+                                <span class="text-xs font-mono text-gray-400">01:44:48,330 --> 01:44:55,580</span>
+                            </div>
+
+                            <div>
+                                <p class="text-sm font-medium">Pausa muito longa: 23.5s antes desta legenda</p>
+                                <p class="text-xs text-gray-400 mt-1">💡 Verificar se há legendas em falta</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Problem 4: High CPS (Warning) -->
+                <div class="p-4 border border-purple-300 bg-purple-900/20 rounded-lg">
+                    <div class="flex items-start gap-3">
+                        <svg class="h-5 w-5 text-purple-500 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+
+                        <div class="flex-1 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <span class="px-2 py-0.5 bg-gray-700 text-xs font-mono rounded">#234</span>
+                                    <span class="text-xs font-mono text-gray-400">00:05:12,100 --> 00:05:14,200</span>
+                                </div>
+                                <button class="px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded">
+                                    ✏️ Editar
+                                </button>
+                            </div>
+
+                            <div>
+                                <p class="text-sm font-medium">CPS muito alto: 24.3 chars/s</p>
+                                <p class="text-xs text-gray-400 mt-1">💡 Simplificar texto ou aumentar duração</p>
+                            </div>
+
+                            <pre class="text-xs bg-black/20 p-2 rounded overflow-x-auto">Isto está a passar demasiado rápido!</pre>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="text-sm text-gray-400 text-center pt-2">
+                    Mostrando 4 de 22 problemas. Corrija os mais críticos primeiro.
+                </p>
+            </div>
+
+            <!-- Action Button -->
+            <button class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors">
+                📥 Descarregar Legendas Corrigidas
+            </button>
+        </div>
+
+        <!-- Workflow Visualization -->
+        <div class="bg-gray-800 rounded-lg border border-gray-700 p-6">
+            <h3 class="text-lg font-semibold mb-4">Workflow do Utilizador</h3>
+
+            <div class="space-y-4">
+                <div class="flex items-center gap-4">
+                    <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-sm font-bold">1</div>
+                    <div class="flex-1">
+                        <p class="font-medium">Traduzir legendas (ES→PT-PT)</p>
+                        <p class="text-sm text-gray-400">Upload do ficheiro SRT original</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-sm font-bold">2</div>
+                    <div class="flex-1">
+                        <p class="font-medium">Validação automática ao completar</p>
+                        <p class="text-sm text-gray-400">Sistema analisa todas as legendas</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <div class="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center text-sm font-bold">3</div>
+                    <div class="flex-1">
+                        <p class="font-medium">Relatório de problemas</p>
+                        <p class="text-sm text-gray-400">22 problemas detectados e categorizados</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-sm font-bold">4</div>
+                    <div class="flex-1">
+                        <p class="font-medium">Editar inline os problemas</p>
+                        <p class="text-sm text-gray-400">Corrigir texto diretamente na interface</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-sm font-bold">✓</div>
+                    <div class="flex-1">
+                        <p class="font-medium">Download corrigido</p>
+                        <p class="text-sm text-gray-400">Legendas de qualidade garantida!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Features -->
+        <div class="bg-gray-800 rounded-lg border border-gray-700 p-6">
+            <h3 class="text-lg font-semibold mb-4">Funcionalidades</h3>
+
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="flex items-start gap-3">
+                    <div class="text-2xl">⏱️</div>
+                    <div>
+                        <p class="font-medium">Detecção de Tempos Longos</p>
+                        <p class="text-sm text-gray-400">Legendas que ficam >10s no ecrã</p>
+                    </div>
+                </div>
+
+                <div class="flex items-start gap-3">
+                    <div class="text-2xl">📏</div>
+                    <div>
+                        <p class="font-medium">Linhas Muito Longas</p>
+                        <p class="text-sm text-gray-400">Texto com >42 caracteres por linha</p>
+                    </div>
+                </div>
+
+                <div class="flex items-start gap-3">
+                    <div class="text-2xl">⏸️</div>
+                    <div>
+                        <p class="font-medium">Pausas Excessivas</p>
+                        <p class="text-sm text-gray-400">Gaps >20s entre legendas</p>
+                    </div>
+                </div>
+
+                <div class="flex items-start gap-3">
+                    <div class="text-2xl">⚡</div>
+                    <div>
+                        <p class="font-medium">CPS Alto</p>
+                        <p class="text-sm text-gray-400">>20 caracteres por segundo</p>
+                    </div>
+                </div>
+
+                <div class="flex items-start gap-3">
+                    <div class="text-2xl">✏️</div>
+                    <div>
+                        <p class="font-medium">Editor Inline</p>
+                        <p class="text-sm text-gray-400">Corrigir problemas diretamente</p>
+                    </div>
+                </div>
+
+                <div class="flex items-start gap-3">
+                    <div class="text-2xl">💡</div>
+                    <div>
+                        <p class="font-medium">Sugestões Automáticas</p>
+                        <p class="text-sm text-gray-400">Dicas para cada problema</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

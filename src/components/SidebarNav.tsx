@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Subtitles,
   Settings,
+  MonitorPlay,
 } from "lucide-react";
 
 interface SidebarNavProps {
@@ -22,6 +23,7 @@ const navItems = [
   { id: "translate", label: "Tradução", icon: Languages },
   { id: "search", label: "Pesquisa de Legendas", icon: Search },
   { id: "recognize", label: "Reconhecimento", icon: Film },
+  { id: "player", label: "Leitor de Vídeo", icon: MonitorPlay },
 ];
 
 const SidebarNav = ({ activeTab, onTabChange }: SidebarNavProps) => {

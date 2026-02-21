@@ -7,6 +7,7 @@ import TranslationPanel from "@/components/panels/TranslationPanel";
 import SubtitleSearch from "@/components/panels/SubtitleSearch";
 import MovieRecognition from "@/components/panels/MovieRecognition";
 import Settings from "@/components/panels/Settings";
+import VideoPlayer from "@/components/panels/VideoPlayer";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { NavigationProvider } from "@/contexts/NavigationContext";
 
@@ -16,6 +17,7 @@ const panels: Record<string, React.ComponentType<any>> = {
   translate: TranslationPanel,
   search: SubtitleSearch,
   recognize: MovieRecognition,
+  player: VideoPlayer,
   settings: Settings,
 };
 

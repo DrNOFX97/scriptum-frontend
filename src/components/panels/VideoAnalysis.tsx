@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { FileVideo, Upload, Info, Film, Clock, Monitor, Layers, AlertCircle, Star, Play, Clapperboard, FileText, Loader2, Download } from "lucide-react";
+import { FileVideo, Upload, Info, Film, Clock, Monitor, Layers, AlertCircle, Play, Clapperboard, FileText, Loader2, Download, Volume2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -10,9 +10,11 @@ import { useFileContext, type Subtitle } from "@/contexts/FileContext";
 import { parseSubtitleLanguage, getSubtitleBadges, toISO6391 } from "@/lib/subtitleLanguages";
 import { analyzeVideoLocally } from "@/lib/videoAnalyzer";
 import { extractAllSubtitles } from "@/lib/subtitleExtractor";
-import { ensureCompatibleAudio } from "@/lib/audioConverter";
+import { ensureCompatibleAudio, type AudioStreamInfo } from "@/lib/audioConverter";
 import { DualVideoPlayer } from "@/components/DualVideoPlayer";
-
+import { parallelUpload } from "@/lib/parallelUpload";
+import { TmdbCard, OnlineSubtitleResults } from "@/components/shared";
+import { useOnlineSubtitleSearch } from "@/hooks/useOnlineSubtitleSearch";
 import { API_BASE } from "@/lib/constants";
 
 interface VideoInfo {
@@ -48,6 +50,7 @@ interface Movie {
   imdb_id: string | null;
 }
 
+
 // Convert SRT to VTT format
 const convertSrtToVtt = (srt: string): string => {
   // Add WEBVTT header
@@ -65,6 +68,7 @@ const VideoAnalysis = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingOperation, setProcessingOperation] = useState<string>("");
   const [processingProgress, setProcessingProgress] = useState<number>(0);
+  const [audioInfo, setAudioInfo] = useState<AudioStreamInfo | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const { toast } = useToast();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -90,6 +94,15 @@ const VideoAnalysis = () => {
     selectedSubtitle,
     setSelectedSubtitle,
   } = useFileContext();
+  const {
+    results: onlineSubtitles,
+    isSearching: isSearchingOnline,
+    downloadingId: downloadingOnlineId,
+    selectingId: selectingOnlineId,
+    search: searchOnline,
+    download: downloadOnlineSubtitle,
+    select: selectOnlineSubtitle,
+  } = useOnlineSubtitleSearch(setSelectedSubtitle);
 
   // Load subtitle into video player when selected
   useEffect(() => {
@@ -179,28 +192,57 @@ const VideoAnalysis = () => {
     setIsDragging(false);
     const file = e.dataTransfer.files[0];
     if (file) {
-      setVideoFile(file); // Guarda no contexto
+      setVideoFile(file);
+      recognizeMovie(file.name);
       await analyzeVideo(file);
     }
   };
 
   const extractAndConvertAudio = async (file: File) => {
     setIsExtractingAudio(true);
-    setProcessingOperation("A extrair áudio...");
+    setProcessingOperation("A preparar upload paralelo...");
     setProcessingProgress(0);
 
     const fileSizeGB = file.size / (1024 * 1024 * 1024);
 
     try {
       console.log('🎵 Starting audio extraction for dual player...');
+      console.log(`📦 File size: ${fileSizeGB.toFixed(2)}GB - Using parallel upload`);
 
-      // Upload and start extraction
-      const formData = new FormData();
-      formData.append('video', file);
+      // Use parallel chunked upload for large files
+      const filePath = await parallelUpload(file, {
+        onProgress: (progress) => {
+          // Upload is 0-30% of overall progress
+          const overallProgress = Math.floor(progress.percentage * 0.3);
+          setProcessingProgress(overallProgress);
+
+          const speedMBps = (progress.uploadSpeed / 1024 / 1024).toFixed(1);
+          const etaMin = Math.ceil(progress.eta / 60);
+          const uploadedMB = (progress.uploadedBytes / 1024 / 1024).toFixed(0);
+          const totalMB = (progress.totalBytes / 1024 / 1024).toFixed(0);
+
+          setProcessingOperation(
+            `Upload paralelo: ${uploadedMB}/${totalMB}MB (${progress.percentage.toFixed(1)}%) ` +
+            `@ ${speedMBps} MB/s | ETA: ${etaMin}min | Chunk ${progress.currentChunk}/${progress.totalChunks}`
+          );
+        },
+        onChunkComplete: (chunkIndex, totalChunks) => {
+          console.log(`✅ Chunk ${chunkIndex + 1}/${totalChunks} complete`);
+        }
+      });
+
+      console.log(`✅ Parallel upload complete: ${filePath}`);
+
+      // Now send the file path to the extraction endpoint
+      setProcessingOperation("A iniciar extração de áudio...");
 
       const response = await fetch(`${API_BASE}/extract-convert-audio`, {
         method: 'POST',
-        body: formData
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          file_path: filePath,
+          filename: file.name
+        })
       });
 
       if (!response.ok) {
@@ -286,6 +328,7 @@ const VideoAnalysis = () => {
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      recognizeMovie(file.name);
       const fileSizeGB = file.size / (1024 * 1024 * 1024);
 
       console.log('🎬 File selected:', file.name, `${fileSizeGB.toFixed(2)}GB`);
@@ -406,8 +449,10 @@ const VideoAnalysis = () => {
             needsConversion = true;
             audioCodec = quickCheck.audioInfo.codec.toUpperCase();
             console.log('⚠️ Audio needs conversion:', audioCodec);
+            setAudioInfo(quickCheck.audioInfo);
           } else if (quickCheck.audioInfo) {
             console.log('✅ Audio is compatible:', quickCheck.audioInfo.codec);
+            setAudioInfo(quickCheck.audioInfo);
           } else {
             console.log('ℹ️ No audio stream found');
           }
@@ -557,6 +602,7 @@ const VideoAnalysis = () => {
     try {
       setIsAnalyzing(true);
       setError(null);
+      setAudioInfo(null);
 
       toast({
         title: "Analisando vídeo localmente...",
@@ -580,9 +626,6 @@ const VideoAnalysis = () => {
         description: `${videoInfo.codec} • ${videoInfo.resolution} • ${videoInfo.duration_formatted}`,
       });
 
-      // Recognize movie from filename (only send filename, not the whole file!)
-      recognizeMovie(file.name);
-
       // Auto-extract subtitles after analysis
       await extractSubtitlesFromVideo(file);
 
@@ -602,40 +645,69 @@ const VideoAnalysis = () => {
 
   const handleRemux = async () => {
     if (!videoFile) {
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Nenhum vídeo carregado",
-      });
+      toast({ variant: "destructive", title: "Erro", description: "Nenhum vídeo carregado" });
       return;
     }
 
     setIsProcessing(true);
     setProcessingOperation("remux");
+    setProcessingProgress(0);
 
     try {
-      toast({
-        title: "Remux iniciado",
-        description: "A remuxar vídeo para MP4 (rápido, sem recodificação)...",
+      // Step 1: Upload via parallel chunked upload
+      toast({ title: "A enviar ficheiro...", description: "Upload em paralelo iniciado" });
+
+      const filePath = await parallelUpload(videoFile, {
+        onProgress: (progress) => {
+          setProcessingProgress(Math.round(progress.percentage * 0.5)); // 0-50%
+        },
       });
 
-      const result = await uploadFile<{ success: boolean; filename: string; size_mb: number }>(
-        `${API_BASE}/remux-mkv-to-mp4`,
-        videoFile,
-        'video'
-      );
+      // Step 2: Start async remux job
+      setProcessingProgress(50);
+      toast({ title: "A remuxar...", description: "Conversão MKV → MP4 em curso" });
 
-      if (result && result.success) {
-        toast({
-          title: "Remux concluído!",
-          description: `Arquivo ${result.filename} (${result.size_mb.toFixed(1)} MB) pronto para download`,
-        });
+      const remuxRes = await fetch(`${API_BASE}/remux-mkv-to-mp4`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ file_path: filePath, filename: videoFile.name }),
+      });
 
-        // Trigger download
-        window.open(`${API_BASE}/download/${result.filename}`, '_blank');
-      } else {
-        throw new Error('Remux falhou');
+      if (!remuxRes.ok) {
+        const err = await remuxRes.json();
+        throw new Error(err.error || "Falha ao iniciar remux");
       }
+
+      const { job_id } = await remuxRes.json();
+
+      // Step 3: Poll status
+      await new Promise<void>((resolve, reject) => {
+        const poll = setInterval(async () => {
+          try {
+            const statusRes = await fetch(`${API_BASE}/remux-status/${job_id}`);
+            const status = await statusRes.json();
+
+            const pct = status.progress?.percentage ?? 0;
+            setProcessingProgress(50 + Math.round(pct * 0.5)); // 50-100%
+
+            if (status.status === "completed") {
+              clearInterval(poll);
+              resolve();
+            } else if (status.status === "error") {
+              clearInterval(poll);
+              reject(new Error(status.error || "Remux falhou"));
+            }
+          } catch (e) {
+            clearInterval(poll);
+            reject(e);
+          }
+        }, 2000);
+      });
+
+      // Step 4: Download
+      toast({ title: "Remux concluído!", description: "A iniciar download do MP4..." });
+      window.open(`${API_BASE}/remux-download/${job_id}`, "_blank");
+
     } catch (err) {
       toast({
         variant: "destructive",
@@ -645,6 +717,7 @@ const VideoAnalysis = () => {
     } finally {
       setIsProcessing(false);
       setProcessingOperation("");
+      setProcessingProgress(0);
     }
   };
 
@@ -660,39 +733,86 @@ const VideoAnalysis = () => {
 
     setIsProcessing(true);
     setProcessingOperation("convert");
+    setProcessingProgress(0);
 
     try {
-      toast({
-        title: "Conversão iniciada",
-        description: "A converter vídeo para MP4 (pode demorar alguns minutos)...",
+      // Step 1: Upload with parallel chunks
+      toast({ title: "A enviar ficheiro...", description: "Upload paralelo em curso" });
+
+      const filePath = await parallelUpload(videoFile, {
+        onProgress: (progress) => {
+          // Upload is 0-50% of total progress
+          setProcessingProgress(Math.round(progress.percentage * 0.5));
+        },
       });
 
-      const result = await uploadFile<{ success: boolean; filename: string; size_mb: number }>(
-        `${API_BASE}/convert-to-mp4`,
-        videoFile,
-        'video'
-      );
+      console.log(`✅ Upload complete: ${filePath}`);
 
-      if (result && result.success) {
-        toast({
-          title: "Conversão concluída!",
-          description: `Arquivo ${result.filename} (${result.size_mb.toFixed(1)} MB) pronto para download`,
-        });
+      // Step 2: Start conversion
+      setProcessingProgress(50);
+      toast({
+        title: "Upload concluído!",
+        description: "A iniciar conversão para MP4...",
+      });
 
-        // Trigger download
-        window.open(`${API_BASE}/download/${result.filename}`, '_blank');
-      } else {
-        throw new Error('Conversão falhou');
+      const convertRes = await fetch(`${API_BASE}/convert-to-mp4`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ file_path: filePath, filename: videoFile.name }),
+      });
+
+      if (!convertRes.ok) {
+        const err = await convertRes.json();
+        throw new Error(err.error || "Falha ao iniciar conversão");
       }
+
+      const { job_id } = await convertRes.json();
+      console.log(`📋 Conversion job: ${job_id}`);
+
+      // Step 3: Poll for completion
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusRes = await fetch(`${API_BASE}/convert-status/${job_id}`);
+          const statusData = await statusRes.json();
+
+          if (statusData.progress) {
+            // Conversion is 50-100% of total progress
+            setProcessingProgress(50 + Math.round(statusData.progress.percentage * 0.5));
+          }
+
+          if (statusData.status === 'completed') {
+            clearInterval(pollInterval);
+            setProcessingProgress(100);
+
+            toast({
+              title: "Conversão concluída!",
+              description: `Ficheiro MP4 pronto para download`,
+            });
+
+            // Trigger download
+            window.open(`${API_BASE}/convert-download/${job_id}`, '_blank');
+
+            setIsProcessing(false);
+            setProcessingOperation("");
+          } else if (statusData.status === 'error') {
+            clearInterval(pollInterval);
+            throw new Error(statusData.error || 'Conversão falhou');
+          }
+        } catch (err) {
+          clearInterval(pollInterval);
+          throw err;
+        }
+      }, 2000);
+
     } catch (err) {
       toast({
         variant: "destructive",
         title: "Erro na conversão",
         description: err instanceof Error ? err.message : "Falha ao converter vídeo",
       });
-    } finally {
       setIsProcessing(false);
       setProcessingOperation("");
+      setProcessingProgress(0);
     }
   };
 
@@ -729,6 +849,51 @@ const VideoAnalysis = () => {
       console.error('Erro ao extrair legendas:', err);
       // Don't show error toast - subtitles are optional
     }
+  };
+
+  const searchOnlineSubtitles = () => {
+    const titleToUse = movieInfo
+      ? (movieInfo as any).original_title || movieInfo.title
+      : videoFile?.name.replace(/\.[^/.]+$/, '') || '';
+    if (!titleToUse) return;
+
+    let query = titleToUse;
+    if (videoFile) {
+      const filename = videoFile.name;
+
+      // Try multiple episode patterns (S01E01, 1x01, S01.E01, etc.)
+      const patterns = [
+        /[Ss](\d{1,2})[Ee](\d{1,2})/,           // S01E01 or s01e01
+        /[Ss](\d{1,2})\.?[Ee](\d{1,2})/,        // S01.E01 or S01E01
+        /(\d{1,2})[xX](\d{1,2})/,               // 1x01 or 1X01
+        /[Ss]eason\.?(\d{1,2}).*[Ee]pisode\.?(\d{1,2})/i,  // Season 1 Episode 1
+      ];
+
+      let tvMatch = null;
+      for (const pattern of patterns) {
+        tvMatch = filename.match(pattern);
+        if (tvMatch) break;
+      }
+
+      if (tvMatch) {
+        // Format as S##E## for better compatibility
+        const season = tvMatch[1].padStart(2, '0');
+        const episode = tvMatch[2].padStart(2, '0');
+
+        // Clean up title by removing quality tags, release groups, etc.
+        let cleanTitle = titleToUse
+          .replace(/\b(1080p|720p|480p|2160p|4K|BluRay|WEB-DL|WEBRip|HDTV|x264|x265|HEVC|AAC|AC3|DDP5?\.1|H\.264)\b/gi, '')
+          .replace(/\[.*?\]/g, '')  // Remove [tags]
+          .replace(/\(.*?\)/g, '')  // Remove (tags)
+          .replace(/\s+/g, ' ')     // Normalize spaces
+          .trim();
+
+        query = `${cleanTitle} S${season}E${episode}`;
+      } else if (movieInfo?.year) {
+        query = `${query} ${movieInfo.year}`;
+      }
+    }
+    searchOnline(query);
   };
 
   const selectExtractedSubtitle = async (subtitle: Subtitle) => {
@@ -862,6 +1027,9 @@ const VideoAnalysis = () => {
         </div>
       )}
 
+      {/* TMDB Info — por cima do leitor */}
+      <TmdbCard movieInfo={movieInfo} isLoading={isLoadingMovie} />
+
       {/* Video Player */}
       {videoUrl && (
         <motion.div
@@ -929,6 +1097,7 @@ const VideoAnalysis = () => {
           animate={{ opacity: 1, scale: 1 }}
           className="space-y-4"
         >
+          {/* Video + Audio Info */}
           <Card className="p-6">
             <div className="flex items-center gap-3 mb-4">
               <Info className="h-5 w-5 text-primary" />
@@ -937,7 +1106,7 @@ const VideoAnalysis = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Film className="h-3 w-3" /> Codec
+                  <Film className="h-3 w-3" /> Codec Vídeo
                 </p>
                 <p className="font-mono text-sm text-foreground">
                   {videoInfo?.codec?.toUpperCase() || 'N/A'} / {videoInfo?.format || 'N/A'}
@@ -963,6 +1132,42 @@ const VideoAnalysis = () => {
                 </p>
                 <p className="font-mono text-sm text-foreground">{videoInfo?.resolution || 'N/A'}</p>
               </div>
+              {audioInfo ? (
+                <>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Volume2 className="h-3 w-3" /> Codec Áudio
+                    </p>
+                    <p className="font-mono text-sm text-foreground flex items-center gap-2">
+                      {audioInfo.codec.toUpperCase()}
+                      {!audioInfo.isCompatible && (
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-destructive/10 text-destructive font-sans">
+                          Incompatível
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Volume2 className="h-3 w-3" /> Canais / Sample Rate
+                    </p>
+                    <p className="font-mono text-sm text-foreground">
+                      {audioInfo.channels === 6 ? '5.1' : audioInfo.channels === 8 ? '7.1' : audioInfo.channels === 1 ? 'Mono' : 'Estéreo'} · {audioInfo.sampleRate}
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Volume2 className="h-3 w-3" /> Áudio
+                  </p>
+                  <p className="font-mono text-sm text-muted-foreground">
+                    {videoInfo.size_mb > 4000
+                      ? 'Ficheiro grande — analisado no servidor'
+                      : 'N/A'}
+                  </p>
+                </div>
+              )}
             </div>
             <div className="mt-4 pt-4 border-t border-border">
               <p className="text-xs text-muted-foreground mb-2">Ficheiro</p>
@@ -972,77 +1177,6 @@ const VideoAnalysis = () => {
               </p>
             </div>
           </Card>
-
-          {/* TMDB Info */}
-          {movieInfo && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <Card className="p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <Film className="h-5 w-5 text-primary" />
-                  <h3 className="font-semibold text-foreground">Informações TMDB</h3>
-                </div>
-                <div className="flex gap-6">
-                  {movieInfo?.poster && (
-                    <div className="flex-shrink-0">
-                      <img
-                        src={movieInfo.poster}
-                        alt={movieInfo?.title || 'Movie poster'}
-                        className="w-32 h-48 object-cover rounded-lg shadow-lg"
-                      />
-                    </div>
-                  )}
-                  <div className="flex-1 space-y-3">
-                    <div>
-                      <h4 className="text-xl font-bold text-foreground">{movieInfo?.title || 'Título desconhecido'}</h4>
-                      {movieInfo?.original_title && movieInfo.original_title !== movieInfo.title && (
-                        <p className="text-sm text-muted-foreground italic">{movieInfo.original_title}</p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-4 text-sm">
-                      {movieInfo?.year && (
-                        <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary font-medium">
-                          <Film className="h-3.5 w-3.5" />
-                          {movieInfo.year}
-                        </span>
-                      )}
-                      {movieInfo?.rating && (
-                        <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 font-medium">
-                          <Star className="h-3.5 w-3.5 fill-current" />
-                          {movieInfo.rating}/10
-                        </span>
-                      )}
-                    </div>
-                    {movieInfo?.overview && (
-                      <p className="text-sm text-muted-foreground leading-relaxed line-clamp-4">
-                        {movieInfo.overview}
-                      </p>
-                    )}
-                    {movieInfo?.imdb_id && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(`https://www.imdb.com/title/${movieInfo.imdb_id}`, '_blank')}
-                      >
-                        Ver no IMDB
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            </motion.div>
-          )}
-
-          {isLoadingMovie && !movieInfo && (
-            <Card className="p-6">
-              <div className="flex items-center justify-center gap-3 text-muted-foreground">
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
-                <span className="text-sm">A procurar informações no TMDB...</span>
-              </div>
-            </Card>
-          )}
 
           {/* Found Subtitles */}
           {extractedSubtitles.length > 0 && (
@@ -1116,11 +1250,13 @@ const VideoAnalysis = () => {
                           onClick={() => {
                             // Download locally extracted subtitle
                             if (subtitle.content) {
-                              const blob = new Blob([subtitle.content], { type: 'text/plain' });
+                              // Use application/octet-stream to force download instead of opening
+                              const blob = new Blob([subtitle.content], { type: 'application/octet-stream' });
                               const url = URL.createObjectURL(blob);
                               const a = document.createElement('a');
                               a.href = url;
-                              a.download = subtitle.filename;
+                              // Ensure filename has .srt extension
+                              a.download = subtitle.filename.endsWith('.srt') ? subtitle.filename : `${subtitle.filename}.srt`;
                               document.body.appendChild(a);
                               a.click();
                               document.body.removeChild(a);
@@ -1139,11 +1275,34 @@ const VideoAnalysis = () => {
             </Card>
           )}
 
+          {/* Online Subtitle Results */}
+          <OnlineSubtitleResults
+            results={onlineSubtitles}
+            isSearching={isSearchingOnline}
+            downloadingId={downloadingOnlineId}
+            selectingId={selectingOnlineId}
+            selectedSubtitle={selectedSubtitle}
+            onDownload={downloadOnlineSubtitle}
+            onSelect={selectOnlineSubtitle}
+          />
+
           {/* Other Operations */}
           <Card className="p-6">
             <h3 className="font-semibold text-foreground mb-3">Outras operações</h3>
             <div className="flex flex-wrap gap-2">
-              {canRemux && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={searchOnlineSubtitles}
+                disabled={isSearchingOnline || (!videoFile && !movieInfo)}
+              >
+                {isSearchingOnline ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />A pesquisar...</>
+                ) : (
+                  <><Search className="h-4 w-4 mr-2" />Pesquisar Legendas Online</>
+                )}
+              </Button>
+              {(canRemux || videoFile?.name.toLowerCase().endsWith('.mkv')) && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -1153,12 +1312,16 @@ const VideoAnalysis = () => {
                   {isProcessing && processingOperation === "remux" ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      A remuxar...
+                      {processingProgress < 50
+                        ? `A enviar... ${processingProgress * 2}%`
+                        : processingProgress < 100
+                        ? `A remuxar... ${(processingProgress - 50) * 2}%`
+                        : "A preparar download..."}
                     </>
                   ) : (
                     <>
                       <Clapperboard className="h-4 w-4 mr-2" />
-                      Remux para MP4 (Rápido)
+                      Descarregar em MP4
                     </>
                   )}
                 </Button>

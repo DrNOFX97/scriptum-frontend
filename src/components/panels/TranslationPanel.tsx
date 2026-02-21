@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useFileContext } from "@/contexts/FileContext";
 import { useNavigation } from "@/contexts/NavigationContext";
 import useFileUpload from "@/hooks/useFileUpload";
+import { SubtitleQualityCheck } from "@/components/SubtitleQualityCheck";
 
 import { API_BASE } from "@/lib/constants";
 
@@ -40,6 +41,29 @@ interface TranslationProgress {
   total_time?: number;
 }
 
+interface ValidationResults {
+  total_entries: number;
+  problems: Array<{
+    index: number;
+    type: string;
+    severity: 'error' | 'warning' | 'info';
+    message: string;
+    timecode: string;
+    text: string;
+    suggestion: string;
+  }>;
+  stats: {
+    long_durations: number;
+    long_lines: number;
+    long_pauses: number;
+    high_cps: number;
+    empty: number;
+    short_durations?: number;
+    too_many_lines?: number;
+  };
+  has_problems: boolean;
+}
+
 const TranslationPanel = () => {
   const [sourceLang, setSourceLang] = useState("en");
   const [targetLang, setTargetLang] = useState("pt-PT");  // Foco em pt-PT
@@ -56,6 +80,11 @@ const TranslationPanel = () => {
 
   // Language detection
   const [isDetectingLanguage, setIsDetectingLanguage] = useState(false);
+
+  // Quality validation
+  const [validationResults, setValidationResults] = useState<ValidationResults | null>(null);
+  const [correctedSubtitles, setCorrectedSubtitles] = useState<Map<number, string>>(new Map());
+  const [originalSubtitleContent, setOriginalSubtitleContent] = useState<string>('');
 
   const { toast } = useToast();
   const { progress, isUploading, error, uploadFile } = useFileUpload();
@@ -108,6 +137,53 @@ const TranslationPanel = () => {
     };
   }, []);
 
+  const validateTranslation = async (jobId: string) => {
+    try {
+      // Download translated file
+      const response = await fetch(`${API_BASE}/translate-download/${jobId}`);
+      if (!response.ok) {
+        throw new Error('Falha ao descarregar ficheiro traduzido');
+      }
+
+      const blob = await response.blob();
+      const content = await blob.text();
+
+      // Store original content for corrections
+      setOriginalSubtitleContent(content);
+
+      // Validate
+      const formData = new FormData();
+      formData.append('subtitle', blob);
+
+      const validationResponse = await fetch(`${API_BASE}/validate-subtitles`, {
+        method: 'POST',
+        body: formData
+      });
+
+      const validationData = await validationResponse.json();
+
+      if (validationData.success && validationData.validation) {
+        setValidationResults(validationData.validation);
+
+        if (validationData.validation.has_problems) {
+          toast({
+            title: "Problemas detetados",
+            description: `${validationData.validation.problems.length} problema(s) na tradução. Reveja antes de usar.`,
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Qualidade verificada",
+            description: "Nenhum problema detetado!",
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Validation error:', err);
+      // Don't show error toast - validation is optional
+    }
+  };
+
   const startProgressPolling = (jobId: string) => {
     // Clear any existing interval
     if (pollingIntervalRef.current) {
@@ -146,6 +222,9 @@ const TranslationPanel = () => {
                 time_taken: data.progress.total_time || 0,
               }
             });
+
+            // Validate translation quality
+            validateTranslation(jobId);
           } else if (data.status === 'error') {
             if (pollingIntervalRef.current) {
               clearInterval(pollingIntervalRef.current);
@@ -389,6 +468,67 @@ const TranslationPanel = () => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}m ${secs}s`;
+  };
+
+  const handleFixProblem = (index: number, newText: string) => {
+    const updated = new Map(correctedSubtitles);
+    updated.set(index, newText);
+    setCorrectedSubtitles(updated);
+
+    toast({
+      title: "Correção aplicada",
+      description: `Legenda #${index} corrigida`,
+    });
+  };
+
+  const downloadCorrectedSubtitles = () => {
+    try {
+      // Apply corrections to original content
+      let correctedContent = originalSubtitleContent;
+
+      // Parse SRT and apply corrections
+      const entries = correctedContent.split(/\n\n+/);
+      const correctedEntries = entries.map(entry => {
+        const lines = entry.trim().split('\n');
+        if (lines.length < 3) return entry;
+
+        try {
+          const index = parseInt(lines[0]);
+          if (correctedSubtitles.has(index)) {
+            // Replace text with corrected version
+            const timecode = lines[1];
+            const newText = correctedSubtitles.get(index);
+            return `${index}\n${timecode}\n${newText}`;
+          }
+        } catch (e) {
+          // Skip invalid entries
+        }
+
+        return entry;
+      });
+
+      const finalContent = correctedEntries.join('\n\n');
+
+      // Download
+      const blob = new Blob([finalContent], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = translatedData?.output_filename?.replace('.srt', '_corrigido.srt') || 'corrected.srt';
+      link.click();
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Download concluído",
+        description: `${correctedSubtitles.size} correção(ões) aplicada(s)`,
+      });
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: err instanceof Error ? err.message : "Falha ao aplicar correções",
+      });
+    }
   };
 
   const detectLanguage = async () => {
@@ -854,6 +994,21 @@ const TranslationPanel = () => {
           ))}
         </ul>
       </Card>
+
+      {/* Quality Check Results */}
+      {validationResults && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <SubtitleQualityCheck
+            validation={validationResults}
+            onFixProblem={handleFixProblem}
+            onDownloadCorrected={downloadCorrectedSubtitles}
+          />
+        </motion.div>
+      )}
 
       {/* Results */}
       {translatedData && (

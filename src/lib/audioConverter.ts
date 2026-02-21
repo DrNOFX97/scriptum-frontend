@@ -1,8 +1,12 @@
 /**
- * Convert MKV audio codecs for browser compatibility using ffmpeg.wasm
+ * Audio conversion for browser compatibility.
+ *
+ * - Local detection using ffmpeg.wasm (fast, no upload)
+ * - Server-side conversion for large files (no memory limits)
  */
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
+import { API_BASE } from './constants';
 
 let ffmpeg: FFmpeg | null = null;
 let isLoaded = false;
@@ -13,6 +17,21 @@ export interface AudioStreamInfo {
   channels: number;
   sampleRate: string;
   isCompatible: boolean;
+}
+
+export interface ServerAudioInfo {
+  has_audio: boolean;
+  audio_info?: {
+    index: number;
+    codec: string;
+    channels: number;
+    channel_layout: string;
+    sample_rate: string;
+    is_compatible: boolean;
+  };
+  file_size_gb?: number;
+  estimated_conversion_time?: string;
+  needs_conversion?: boolean;
 }
 
 /**
@@ -193,6 +212,7 @@ export async function convertAudioToAAC(
 
 /**
  * Check if audio conversion is needed and convert if necessary
+ * Uses local ffmpeg.wasm for small files, server for large files
  */
 export async function ensureCompatibleAudio(
   file: File,
@@ -200,7 +220,7 @@ export async function ensureCompatibleAudio(
   checkOnly: boolean = false
 ): Promise<{ file: File; converted: boolean; audioInfo: AudioStreamInfo | null }> {
   try {
-    // Detect audio codec
+    // Detect audio codec locally (fast, no upload)
     const audioInfo = await detectAudioCodec(file, (p, msg) =>
       onProgress?.(p * 0.3, msg)
     );
@@ -223,8 +243,19 @@ export async function ensureCompatibleAudio(
     }
 
     // Audio needs conversion
-    onProgress?.(30, `Áudio ${audioInfo.codec.toUpperCase()} não é compatível. A converter...`);
+    const fileSizeGB = file.size / (1024 * 1024 * 1024);
 
+    // For files > 2GB, use server-side conversion (no memory limits)
+    if (fileSizeGB > 2) {
+      onProgress?.(30, `Ficheiro grande (${fileSizeGB.toFixed(1)}GB). A usar conversão no servidor...`);
+      const convertedFile = await convertAudioOnServer(file, (p, msg) =>
+        onProgress?.(30 + p * 0.7, msg)
+      );
+      return { file: convertedFile, converted: true, audioInfo };
+    }
+
+    // For small files, use local conversion (faster, no upload)
+    onProgress?.(30, `Áudio ${audioInfo.codec.toUpperCase()} não é compatível. A converter localmente...`);
     const convertedFile = await convertAudioToAAC(file, (p, msg) =>
       onProgress?.(30 + p * 0.7, msg)
     );
@@ -234,5 +265,162 @@ export async function ensureCompatibleAudio(
   } catch (error) {
     console.error('Failed to ensure compatible audio:', error);
     throw error;
+  }
+}
+
+/**
+ * Convert audio on server (for large files that ffmpeg.wasm can't handle)
+ */
+export async function convertAudioOnServer(
+  file: File,
+  onProgress?: (progress: number, message: string) => void
+): Promise<File> {
+  try {
+    onProgress?.(5, 'A enviar para servidor...');
+
+    // Upload file and start conversion job
+    const formData = new FormData();
+    formData.append('video', file);
+
+    const uploadResponse = await fetch(`${API_BASE}/convert-audio-mkv`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!uploadResponse.ok) {
+      throw new Error('Falha ao iniciar conversão no servidor');
+    }
+
+    const { job_id, file_size_gb, estimated_time } = await uploadResponse.json();
+
+    onProgress?.(10, `Ficheiro enviado (${file_size_gb}GB). Tempo estimado: ${estimated_time}`);
+
+    // Poll for conversion status
+    let lastPercentage = 10;
+    while (true) {
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Poll every 2 seconds
+
+      const statusResponse = await fetch(`${API_BASE}/convert-audio-status/${job_id}`);
+      if (!statusResponse.ok) {
+        throw new Error('Falha ao verificar status da conversão');
+      }
+
+      const status = await statusResponse.json();
+
+      // Update progress
+      if (status.progress) {
+        const percentage = 10 + (status.progress.percentage * 0.8); // 10-90%
+        if (percentage > lastPercentage) {
+          lastPercentage = percentage;
+          onProgress?.(percentage, status.progress.message || 'A converter...');
+        }
+      }
+
+      // Check if completed
+      if (status.status === 'completed') {
+        onProgress?.(95, 'A transferir ficheiro convertido...');
+
+        // Download converted file
+        const downloadResponse = await fetch(`${API_BASE}/convert-audio-download/${job_id}`);
+        if (!downloadResponse.ok) {
+          throw new Error('Falha ao transferir ficheiro convertido');
+        }
+
+        const blob = await downloadResponse.blob();
+        const convertedFile = new File([blob], file.name.replace(/\.mkv$/i, '.web.mkv'), {
+          type: 'video/x-matroska'
+        });
+
+        onProgress?.(100, 'Conversão concluída!');
+        return convertedFile;
+      }
+
+      // Check if error
+      if (status.status === 'error') {
+        throw new Error(status.error || 'Conversão falhou no servidor');
+      }
+
+      // Check if cancelled
+      if (status.status === 'cancelled') {
+        throw new Error('Conversão cancelada');
+      }
+    }
+
+  } catch (error) {
+    console.error('Server audio conversion failed:', error);
+    throw error instanceof Error ? error : new Error('Falha na conversão no servidor');
+  }
+}
+
+/**
+ * Cancel server-side audio conversion job
+ */
+export async function cancelServerConversion(jobId: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${API_BASE}/convert-audio-cancel/${jobId}`, {
+      method: 'POST',
+    });
+
+    if (!response.ok) {
+      return false;
+    }
+
+    const result = await response.json();
+    return result.success;
+
+  } catch (error) {
+    console.error('Failed to cancel conversion:', error);
+    return false;
+  }
+}
+
+/**
+ * Extract ONLY audio from video and convert to AAC
+ * Returns a standalone AAC file (no video, much smaller)
+ */
+export async function extractAudioToAAC(
+  file: File,
+  onProgress?: (progress: number, message: string) => void
+): Promise<File> {
+  try {
+    onProgress?.(5, 'A inicializar extração de áudio...');
+
+    const ffmpegInstance = await loadFFmpeg((p) => onProgress?.(5 + p * 0.1, 'A carregar ffmpeg...'));
+
+    onProgress?.(15, 'A carregar ficheiro...');
+    await ffmpegInstance.writeFile('input.mkv', await fetchFile(file));
+
+    onProgress?.(20, 'A extrair e converter áudio → AAC...');
+
+    // Extract ONLY audio, convert to AAC (no video!)
+    await ffmpegInstance.exec([
+      '-i', 'input.mkv',
+      '-vn',             // NO video
+      '-c:a', 'aac',     // Convert audio to AAC
+      '-b:a', '192k',    // Audio bitrate 192 kbps
+      'output.aac'       // Output as AAC file
+    ]);
+
+    onProgress?.(90, 'A finalizar...');
+
+    // Read extracted AAC file
+    const data = await ffmpegInstance.readFile('output.aac');
+    const blob = new Blob([data], { type: 'audio/aac' });
+
+    // Create AAC filename (same as video but .aac extension)
+    const originalName = file.name.replace(/\.(mkv|mp4|avi|mov)$/i, '');
+    const aacFile = new File([blob], `${originalName}.aac`, { type: 'audio/aac' });
+
+    // Clean up
+    await ffmpegInstance.deleteFile('input.mkv');
+    await ffmpegInstance.deleteFile('output.aac');
+
+    onProgress?.(100, 'Áudio extraído!');
+
+    return aacFile;
+
+  } catch (error) {
+    console.error('Failed to extract audio:', error);
+    throw error instanceof Error ? error : new Error('Falha ao extrair áudio');
   }
 }

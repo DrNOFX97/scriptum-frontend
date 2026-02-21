@@ -14,6 +14,7 @@ Scriptum v2.5 combina um frontend React moderno com um backend Python robusto pa
 ### Funcionalidades Principais
 
 🎥 **Análise de Vídeo** - Metadados, codec, FPS com FFmpeg
+🚀 **Upload Paralelo** - Chunks paralelos para uploads 4-5x mais rápidos
 🔄 **Sincronização** - MLX Whisper para sync automático
 🌍 **Tradução** - Gemini AI com formatação automática
 🔍 **Pesquisa** - OpenSubtitles integrado
@@ -53,6 +54,18 @@ source venv/bin/activate
 3. Aceda http://localhost:8080
 4. Selecione funcionalidade no dashboard
 5. Upload e processe ficheiros
+
+## 🚀 Upload Paralelo
+
+Scriptum v2.5 implementa upload paralelo com chunks para ficheiros grandes:
+
+- **Performance**: 4-5x mais rápido que upload tradicional
+- **Exemplo**: 6GB em ~3 minutos (vs ~15 min sequencial)
+- **Tecnologia**: 8 chunks paralelos de 10MB cada
+- **Reliability**: Retry automático + validação de integridade
+
+📚 **Documentação Completa**: [`docs/PARALLEL_UPLOAD.md`](docs/PARALLEL_UPLOAD.md)
+🔧 **Troubleshooting**: [`docs/PARALLEL_UPLOAD_TROUBLESHOOTING.md`](docs/PARALLEL_UPLOAD_TROUBLESHOOTING.md)
 
 ---
 

@@ -76,6 +76,8 @@ const SubtitleSearch = () => {
 
   const [query, setQuery] = useState(contextSearchQuery);
   const [language, setLanguage] = useState(contextSearchLanguage || 'pt-PT');
+  const [season, setSeason] = useState('');
+  const [episode, setEpisode] = useState('');
   const [results, setResults] = useState<Subtitle[]>(searchedSubtitles);
   const [isDownloading, setIsDownloading] = useState<string | null>(null);
   const [isTesting, setIsTesting] = useState<string | null>(null);
@@ -87,12 +89,30 @@ const SubtitleSearch = () => {
     setResults(searchedSubtitles);
   }, [searchedSubtitles]);
 
+  // Detetar temporada/episódio a partir do nome do ficheiro
+  useEffect(() => {
+    if (!videoFile) {
+      setSeason('');
+      setEpisode('');
+      return;
+    }
+    const tvMatch = videoFile.name.match(/[Ss](\d{1,2})[Ee](\d{1,2})/);
+    if (tvMatch) {
+      setSeason(tvMatch[1].padStart(2, '0'));
+      setEpisode(tvMatch[2].padStart(2, '0'));
+    } else {
+      setSeason('');
+      setEpisode('');
+    }
+  }, [videoFile]);
+
   // Auto-fill query when movie info is available
   useEffect(() => {
     if (movieInfo && !query) {
-      // Usar título original (inglês) se disponível, senão usar título traduzido
       const titleToUse = movieInfo.original_title || movieInfo.title;
-      const searchQuery = movieInfo.year ? `${titleToUse} ${movieInfo.year}` : titleToUse;
+      const isTv = (movieInfo as any).media_type === 'tv';
+      // Para séries não incluir o ano (o episódio é mais específico)
+      const searchQuery = (!isTv && movieInfo.year) ? `${titleToUse} ${movieInfo.year}` : titleToUse;
 
       setQuery(searchQuery);
       setAutoFilledFrom('tmdb');
@@ -181,7 +201,14 @@ const SubtitleSearch = () => {
     }
 
     setResults([]);
-    const searchQuery = query.trim();
+    let searchQuery = query.trim();
+
+    // Anexar episódio se preenchido e não incluído já na query
+    if (season && episode && !/[Ss]\d+[Ee]\d+/.test(searchQuery)) {
+      searchQuery = `${searchQuery} S${season.padStart(2, '0')}E${episode.padStart(2, '0')}`;
+    } else if (season && !episode && !/[Ss]\d+/.test(searchQuery)) {
+      searchQuery = `${searchQuery} S${season.padStart(2, '0')}`;
+    }
 
     console.log('🔍 Pesquisando:', searchQuery, 'Idioma:', language);
 
@@ -330,13 +357,50 @@ const SubtitleSearch = () => {
               Título do Filme ou Série
             </label>
             <Input
-              placeholder="Ex: Dune, Breaking Bad S01E01"
+              placeholder="Ex: Dune, Breaking Bad"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && searchSubtitles()}
               disabled={isSearching}
             />
           </div>
+
+          {/* Season / Episode */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">
+                Temporada <span className="text-muted-foreground font-normal">(opcional)</span>
+              </label>
+              <Input
+                placeholder="01"
+                value={season}
+                onChange={(e) => setSeason(e.target.value.replace(/\D/g, '').slice(0, 2))}
+                onKeyDown={(e) => e.key === 'Enter' && searchSubtitles()}
+                disabled={isSearching}
+                className="font-mono"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">
+                Episódio <span className="text-muted-foreground font-normal">(opcional)</span>
+              </label>
+              <Input
+                placeholder="01"
+                value={episode}
+                onChange={(e) => setEpisode(e.target.value.replace(/\D/g, '').slice(0, 2))}
+                onKeyDown={(e) => e.key === 'Enter' && searchSubtitles()}
+                disabled={isSearching}
+                className="font-mono"
+              />
+            </div>
+          </div>
+
+          {/* Preview da query final */}
+          {(season || episode) && (
+            <p className="text-xs text-muted-foreground font-mono bg-muted/50 px-3 py-1.5 rounded-md">
+              Pesquisa: {query.trim()}{season && episode ? ` S${season.padStart(2,'0')}E${episode.padStart(2,'0')}` : season ? ` S${season.padStart(2,'0')}` : ''}
+            </p>
+          )}
 
           <div>
             <label className="text-sm font-medium text-foreground mb-2 block">
@@ -367,6 +431,8 @@ const SubtitleSearch = () => {
                 variant="outline"
                 onClick={() => {
                   setQuery("");
+                  setSeason("");
+                  setEpisode("");
                   setAutoFilledFrom(null);
                   setResults([]);
                 }}

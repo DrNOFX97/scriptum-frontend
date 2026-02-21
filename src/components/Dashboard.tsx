@@ -5,17 +5,9 @@ import {
   Languages,
   Search,
   Film,
-  Subtitles,
-  Clock,
   Zap,
+  MonitorPlay,
 } from "lucide-react";
-
-const stats = [
-  { label: "Legendas Processadas", value: "—", icon: Subtitles },
-  { label: "Vídeos Analisados", value: "—", icon: FileVideo },
-  { label: "Traduções", value: "—", icon: Languages },
-  { label: "Tempo Médio", value: "—", icon: Clock },
-];
 
 const features = [
   {
@@ -53,6 +45,13 @@ const features = [
     icon: Film,
     gradient: "from-primary/20 to-primary/5",
   },
+  {
+    id: "player",
+    title: "Leitor de Vídeo",
+    description: "Reproduz MP4, MKV, AVI, WebM, HLS e DASH. Suporte a legendas e conversão automática.",
+    icon: MonitorPlay,
+    gradient: "from-secondary/20 to-secondary/5",
+  },
 ];
 
 interface DashboardProps {
@@ -86,28 +85,6 @@ const Dashboard = ({ onNavigate }: DashboardProps) => {
           </p>
         </div>
       </motion.div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, i) => {
-          const Icon = stat.icon;
-          return (
-            <motion.div
-              key={stat.label}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 + i * 0.05, duration: 0.4 }}
-              className="rounded-lg border border-border bg-card p-4"
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <Icon className="h-4 w-4 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">{stat.label}</span>
-              </div>
-              <p className="text-2xl font-bold font-mono text-foreground">{stat.value}</p>
-            </motion.div>
-          );
-        })}
-      </div>
 
       {/* Feature Cards */}
       <div>

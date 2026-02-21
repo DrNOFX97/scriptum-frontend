@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Settings as SettingsIcon, Save, AlertCircle, CheckCircle, Key, Database, Globe, Eye, EyeOff } from "lucide-react";
+import { Settings as SettingsIcon, Save, AlertCircle, CheckCircle, Key, Database, Globe, Eye, EyeOff, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import SystemDiagnostics from "./SystemDiagnostics";
 
 import { API_BASE } from "@/lib/constants";
 
@@ -121,18 +123,31 @@ const Settings = () => {
       <div>
         <h2 className="text-xl font-bold text-foreground mb-1">Configurações</h2>
         <p className="text-sm text-muted-foreground">
-          Configure as suas chaves API e credenciais.
+          Configure chaves API, credenciais e verifique capacidade do sistema.
         </p>
       </div>
 
-      {hasChanges && (
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Tem alterações não guardadas. Clique em "Guardar Alterações" para aplicar.
-          </AlertDescription>
-        </Alert>
-      )}
+      <Tabs defaultValue="api-keys" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="api-keys" className="flex items-center gap-2">
+            <Key className="h-4 w-4" />
+            Chaves API
+          </TabsTrigger>
+          <TabsTrigger value="diagnostics" className="flex items-center gap-2">
+            <Monitor className="h-4 w-4" />
+            Diagnóstico Sistema
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="api-keys" className="space-y-6 mt-6">
+          {hasChanges && (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Tem alterações não guardadas. Clique em "Guardar Alterações" para aplicar.
+              </AlertDescription>
+            </Alert>
+          )}
 
       {/* OpenSubtitles Configuration */}
       <Card className="p-6">
@@ -365,16 +380,22 @@ const Settings = () => {
         )}
       </div>
 
-      {/* Info */}
-      <Card className="p-6 bg-primary/5">
-        <div className="flex gap-3">
-          <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-          <div className="space-y-2 text-sm text-muted-foreground">
-            <p><strong>Nota:</strong> As configurações são guardadas no ficheiro <code className="bg-muted px-1 py-0.5 rounded">.env</code> do backend.</p>
-            <p>É necessário reiniciar o servidor após guardar as alterações para que sejam aplicadas.</p>
-          </div>
-        </div>
-      </Card>
+          {/* Info */}
+          <Card className="p-6 bg-primary/5">
+            <div className="flex gap-3">
+              <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <p><strong>Nota:</strong> As configurações são guardadas no ficheiro <code className="bg-muted px-1 py-0.5 rounded">.env</code> do backend.</p>
+                <p>É necessário reiniciar o servidor após guardar as alterações para que sejam aplicadas.</p>
+              </div>
+            </div>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="diagnostics" className="mt-6">
+          <SystemDiagnostics />
+        </TabsContent>
+      </Tabs>
     </motion.div>
   );
 };
