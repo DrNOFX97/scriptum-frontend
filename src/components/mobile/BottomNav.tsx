@@ -1,21 +1,22 @@
 import { Search, Settings, FileVideo, Languages } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useScrollDirection } from "@/hooks/useScrollDirection";
+import { TAB, type TabId } from "@/lib/constants";
 
 interface BottomNavProps {
-  activeTab: string;
-  onTabChange: (tab: string) => void;
+  activeTab: TabId;
+  onTabChange: (tab: TabId) => void;
 }
 
 export const BottomNav = ({ activeTab, onTabChange }: BottomNavProps) => {
   const scrollDirection = useScrollDirection({ threshold: 20, debounce: 50 });
 
   const tabs = [
-    { id: "sync", icon: FileVideo, label: "Sync" },
-    { id: "search", icon: Search, label: "Pesquisar" },
-    { id: "translate", icon: Languages, label: "Traduzir" },
-    { id: "settings", icon: Settings, label: "Config" },
-  ];
+    { id: TAB.SYNC, icon: FileVideo, label: "Sync" },
+    { id: TAB.SEARCH, icon: Search, label: "Pesquisar" },
+    { id: TAB.TRANSLATE, icon: Languages, label: "Traduzir" },
+    { id: TAB.SETTINGS, icon: Settings, label: "Config" },
+  ] as const;
 
   // Hide when scrolling down, show when scrolling up or at top
   const isVisible = scrollDirection !== "down";

@@ -11,6 +11,8 @@ import { ensureCompatibleAudio, extractAudioToAAC, detectAudioCodec } from "@/li
 import { parallelUpload } from "@/lib/parallelUpload";
 
 import { API_BASE } from "@/lib/constants";
+import api from "@/lib/api";
+import { downloadUrl } from "@/lib/utils";
 
 interface SyncResponse {
   success: boolean;
@@ -225,16 +227,16 @@ const SubtitleSync = () => {
     const pollInterval = setInterval(async () => {
       try {
         console.log('🔄 Polling sync log...');
-        const response = await fetch(`${API_BASE}/sync-log/${logFile}`);
-        const data = await response.json();
+        const response = await api.getSyncLog(logFile);
+        const data = response.data as any;
 
         console.log('📦 Log data received:', {
-          logCount: data.logs?.length || 0,
-          complete: data.complete,
-          lastLog: data.logs?.[data.logs.length - 1]
+          logCount: data?.logs?.length || 0,
+          complete: data?.complete,
+          lastLog: data?.logs?.[data?.logs.length - 1]
         });
 
-        if (data.logs && data.logs.length > 0) {
+        if (data?.logs && data.logs.length > 0) {
           setSyncLogs(data.logs);
 
           // Extract detailed metrics
@@ -245,7 +247,7 @@ const SubtitleSync = () => {
         }
 
         // Stop polling if complete
-        if (data.complete) {
+        if (data?.complete) {
           console.log('✅ Sync complete!');
           clearInterval(pollInterval);
           setSyncProgress(100);
@@ -466,10 +468,10 @@ const SubtitleSync = () => {
       // Wait for completion before showing success toast
       const checkCompletion = setInterval(async () => {
         try {
-          const logResponse = await fetch(`${API_BASE}/sync-log/${result.log_file}`);
-          const logData = await logResponse.json();
+          const logResponse = await api.getSyncLog(result.log_file);
+          const logData = logResponse.data as any;
 
-          if (logData.complete) {
+          if (logData?.complete) {
             clearInterval(checkCompletion);
             setIsSyncing(false);
 
@@ -493,10 +495,10 @@ const SubtitleSync = () => {
 
   const downloadSynced = () => {
     if (syncedData?.synced_file) {
-      const link = document.createElement('a');
-      link.href = `${API_BASE}/download/${syncedData.synced_file}`;
-      link.download = syncedData.synced_file;
-      link.click();
+      downloadUrl(
+        `${API_BASE}/download/${syncedData.synced_file}`,
+        syncedData.synced_file
+      );
     }
   };
 

@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import SystemDiagnostics from "./SystemDiagnostics";
 
-import { API_BASE } from "@/lib/constants";
+import api from "@/lib/api";
 
 interface EnvConfig {
   OPENSUBTITLES_API_KEY: string;
@@ -42,12 +42,11 @@ const Settings = () => {
   const loadConfig = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/config`);
-      if (response.ok) {
-        const data = await response.json();
-        setConfig(data.config);
+      const response = await api.getConfig();
+      if (response.success) {
+        setConfig((response.data as any).config);
       } else {
-        throw new Error('Failed to load config');
+        throw new Error(response.error || 'Failed to load config');
       }
     } catch (err) {
       toast({
@@ -72,14 +71,10 @@ const Settings = () => {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const response = await fetch(`${API_BASE}/config`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ config }),
-      });
+      const response = await api.saveConfig(config);
 
-      if (!response.ok) {
-        throw new Error('Failed to save config');
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to save config');
       }
 
       toast({

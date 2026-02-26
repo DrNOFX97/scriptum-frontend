@@ -10,11 +10,12 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useFileContext } from "@/contexts/FileContext";
 import { useNavigation } from "@/contexts/NavigationContext";
-import { API_BASE } from '@/lib/constants';
+import { API_BASE, TAB } from '@/lib/constants';
 import api from '@/lib/api';
 import { downloadSubtitle, downloadFromApi } from '@/lib/file-utils';
 import { ApiFormCard } from '@/components/shared';
 import { useApiCall } from '@/hooks/useApiCall';
+import { LANGUAGE_NAMES, LANGUAGE_FALLBACK } from '@/lib/subtitleLanguages';
 
 interface Subtitle {
   id: string;
@@ -36,27 +37,6 @@ interface SearchResponse {
   message?: string;
   error?: string;
 }
-
-// Ordem de fallback para idiomas - línguas latinas primeiro para melhor tradução
-const LANGUAGE_FALLBACK: Record<string, string[]> = {
-  'pt-PT': ['pt-BR', 'es', 'it', 'fr', 'en'], // PT-PT: prioriza PT-BR, depois espanhol, italiano, francês
-  'pt-BR': ['pt-PT', 'es', 'it', 'fr', 'en'],
-  'es': ['pt-PT', 'pt-BR', 'it', 'fr', 'en'],
-  'it': ['es', 'pt-PT', 'pt-BR', 'fr', 'en'],
-  'fr': ['es', 'it', 'pt-PT', 'pt-BR', 'en'],
-  'en': ['es', 'pt-PT', 'pt-BR', 'fr', 'it'],
-  'de': ['en', 'fr', 'es'],
-};
-
-const LANGUAGE_NAMES: Record<string, string> = {
-  'pt-PT': 'Português (Portugal)',
-  'pt-BR': 'Português (Brasil)',
-  'en': 'Inglês',
-  'es': 'Espanhol',
-  'it': 'Italiano',
-  'fr': 'Francês',
-  'de': 'Alemão',
-};
 
 const SubtitleSearch = () => {
   const { toast } = useToast();
@@ -283,7 +263,7 @@ const SubtitleSearch = () => {
 
         // Navigate to video player
         setTimeout(() => {
-          navigateToTab('analyze');
+          navigateToTab(TAB.ANALYZE);
         }, 500);
       } else {
         throw new Error(data?.error || 'Falha ao carregar legenda');

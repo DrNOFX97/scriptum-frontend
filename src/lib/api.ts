@@ -253,6 +253,45 @@ class ApiService {
     if (tone) formData.append('tone', tone);
     return this.upload('/translate', formData);
   }
+
+  async getTranslationStatus(jobId: string) {
+    return this.request(`/translate-status/${jobId}`);
+  }
+
+  async downloadTranslation(jobId: string): Promise<Blob> {
+    const url = `${this.baseUrl}/translate-download/${jobId}`;
+    const response = await fetch(url);
+    if (!response.ok) throw new ApiError(`HTTP ${response.status}`, response.status);
+    return response.blob();
+  }
+
+  async detectLanguage(file: File) {
+    const formData = new FormData();
+    formData.append('subtitle', file);
+    return this.upload('/detect-language', formData);
+  }
+
+  async validateSubtitles(file: Blob) {
+    const formData = new FormData();
+    formData.append('subtitle', file);
+    return this.upload('/validate-subtitles', formData);
+  }
+
+  async getSyncLog(logFile: string) {
+    return this.request(`/sync-log/${logFile}`);
+  }
+
+  // Config
+  async getConfig() {
+    return this.request('/config');
+  }
+
+  async saveConfig(config: Record<string, string>) {
+    return this.request('/config', {
+      method: 'POST',
+      body: JSON.stringify({ config }),
+    });
+  }
 }
 
 export const api = new ApiService();

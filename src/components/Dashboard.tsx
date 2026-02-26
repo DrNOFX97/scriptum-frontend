@@ -8,45 +8,47 @@ import {
   Zap,
   MonitorPlay,
 } from "lucide-react";
+import { TAB } from "@/lib/constants";
+import type { TabId } from "@/lib/constants";
 
 const features = [
   {
-    id: "analyze",
+    id: TAB.ANALYZE,
     title: "Análise de Vídeo",
     description: "Analise metadados, codec, duração, FPS e resolução com FFmpeg.",
     icon: FileVideo,
     gradient: "from-primary/20 to-primary/5",
   },
   {
-    id: "sync",
+    id: TAB.SYNC,
     title: "Sincronização",
     description: "Sincronize SRT com vídeo usando MLX Whisper e ajuste de offsets.",
     icon: RefreshCw,
     gradient: "from-secondary/20 to-secondary/5",
   },
   {
-    id: "translate",
+    id: TAB.TRANSLATE,
     title: "Tradução",
     description: "Traduza legendas em batches com Gemini e regras de formatação.",
     icon: Languages,
     gradient: "from-primary/20 to-primary/5",
   },
   {
-    id: "search",
+    id: TAB.SEARCH,
     title: "Pesquisa de Legendas",
     description: "Pesquise e descarregue legendas do OpenSubtitles.",
     icon: Search,
     gradient: "from-secondary/20 to-secondary/5",
   },
   {
-    id: "recognize",
+    id: TAB.RECOGNIZE,
     title: "Reconhecimento de Filmes",
     description: "Identifique filmes via TMDB com título, poster e sinopse.",
     icon: Film,
     gradient: "from-primary/20 to-primary/5",
   },
   {
-    id: "player",
+    id: TAB.PLAYER,
     title: "Leitor de Vídeo",
     description: "Reproduz MP4, MKV, AVI, WebM, HLS e DASH. Suporte a legendas e conversão automática.",
     icon: MonitorPlay,
@@ -55,7 +57,7 @@ const features = [
 ];
 
 interface DashboardProps {
-  onNavigate: (tab: string) => void;
+  onNavigate: (tab: TabId) => void;
 }
 
 const Dashboard = ({ onNavigate }: DashboardProps) => {

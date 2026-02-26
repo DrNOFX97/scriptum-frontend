@@ -1,4 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
+import type { VideoInfo, Movie } from '@/lib/types';
+
+export type { VideoInfo, Movie };
 
 export interface Subtitle {
   index: number;
@@ -6,6 +9,7 @@ export interface Subtitle {
   title?: string;
   codec: string;
   filename: string;
+  content?: string;
 }
 
 export interface SearchedSubtitle {
@@ -16,6 +20,7 @@ export interface SearchedSubtitle {
   rating: number;
   uploader: string;
   format: string;
+  source?: string;
 }
 
 export interface SelectedSubtitle {
@@ -27,8 +32,8 @@ export interface SelectedSubtitle {
 interface FileContextType {
   videoFile: File | null;
   subtitleFile: File | null;
-  videoInfo: any | null;
-  movieInfo: any | null;
+  videoInfo: VideoInfo | null;
+  movieInfo: Movie | null;
   videoUrl: string | null;
   canRemux: boolean;
   canConvert: boolean;
@@ -39,8 +44,8 @@ interface FileContextType {
   selectedSubtitle: SelectedSubtitle | null;
   setVideoFile: (file: File | null) => void;
   setSubtitleFile: (file: File | null) => void;
-  setVideoInfo: (info: any | null) => void;
-  setMovieInfo: (info: any | null) => void;
+  setVideoInfo: (info: VideoInfo | null) => void;
+  setMovieInfo: (info: Movie | null) => void;
   setVideoUrl: (url: string | null) => void;
   setCanRemux: (can: boolean) => void;
   setCanConvert: (can: boolean) => void;
@@ -57,8 +62,8 @@ const FileContext = createContext<FileContextType | undefined>(undefined);
 export const FileProvider = ({ children }: { children: ReactNode }) => {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [subtitleFile, setSubtitleFile] = useState<File | null>(null);
-  const [videoInfo, setVideoInfo] = useState<any | null>(null);
-  const [movieInfo, setMovieInfo] = useState<any | null>(null);
+  const [videoInfo, setVideoInfo] = useState<VideoInfo | null>(null);
+  const [movieInfo, setMovieInfo] = useState<Movie | null>(null);
   const [videoUrl, setVideoUrlState] = useState<string | null>(null);
   const [canRemux, setCanRemux] = useState<boolean>(false);
   const [canConvert, setCanConvert] = useState<boolean>(false);
@@ -102,10 +107,9 @@ export const FileProvider = ({ children }: { children: ReactNode }) => {
     setSelectedSubtitle(null);
   };
 
-  // Cleanup on unmount - sem dependências para evitar loops
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      // Captura o valor atual do videoUrl no momento da criação do cleanup
       const currentVideoUrl = videoUrl;
       if (currentVideoUrl) {
         try {
@@ -118,36 +122,40 @@ export const FileProvider = ({ children }: { children: ReactNode }) => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const value = useMemo<FileContextType>(() => ({
+    videoFile,
+    subtitleFile,
+    videoInfo,
+    movieInfo,
+    videoUrl,
+    canRemux,
+    canConvert,
+    extractedSubtitles,
+    searchedSubtitles,
+    searchQuery,
+    searchLanguage,
+    selectedSubtitle,
+    setVideoFile,
+    setSubtitleFile,
+    setVideoInfo,
+    setMovieInfo,
+    setVideoUrl,
+    setCanRemux,
+    setCanConvert,
+    setExtractedSubtitles,
+    setSearchedSubtitles,
+    setSearchQuery,
+    setSearchLanguage,
+    setSelectedSubtitle,
+    clearAll,
+  }), [
+    videoFile, subtitleFile, videoInfo, movieInfo, videoUrl,
+    canRemux, canConvert, extractedSubtitles, searchedSubtitles,
+    searchQuery, searchLanguage, selectedSubtitle,
+  ]);
+
   return (
-    <FileContext.Provider
-      value={{
-        videoFile,
-        subtitleFile,
-        videoInfo,
-        movieInfo,
-        videoUrl,
-        canRemux,
-        canConvert,
-        extractedSubtitles,
-        searchedSubtitles,
-        searchQuery,
-        searchLanguage,
-        selectedSubtitle,
-        setVideoFile,
-        setSubtitleFile,
-        setVideoInfo,
-        setMovieInfo,
-        setVideoUrl,
-        setCanRemux,
-        setCanConvert,
-        setExtractedSubtitles,
-        setSearchedSubtitles,
-        setSearchQuery,
-        setSearchLanguage,
-        setSelectedSubtitle,
-        clearAll,
-      }}
-    >
+    <FileContext.Provider value={value}>
       {children}
     </FileContext.Provider>
   );

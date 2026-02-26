@@ -5,18 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { API_BASE } from "@/lib/constants";
-
-interface Movie {
-  id: number;
-  title: string;
-  original_title: string;
-  year: string;
-  rating: number;
-  overview: string;
-  poster: string;
-  imdb_id: string | null;
-}
+import api from "@/lib/api";
+import type { Movie } from "@/lib/types";
 
 const MovieRecognition = () => {
   const [filename, setFilename] = useState("");
@@ -36,15 +26,10 @@ const MovieRecognition = () => {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/recognize-movie`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename }),
-      });
+      const response = await api.recognizeMovie(filename);
+      const data = response.data as any;
 
-      const data = await response.json();
-
-      if (data.success && data.movie) {
+      if (response.success && data?.movie) {
         setMovie(data.movie);
         toast({
           title: "Filme encontrado!",
@@ -139,7 +124,7 @@ const MovieRecognition = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => window.open(`https://www.imdb.com/title/${movie.imdb_id}`, '_blank')}
+                    onClick={() => window.open(`https://www.imdb.com/title/${movie!.imdb_id}`, '_blank')}
                   >
                     Ver no IMDB
                   </Button>

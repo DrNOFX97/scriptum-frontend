@@ -4,6 +4,21 @@
  */
 
 // ============================================================================
+// Navigation Tabs
+// ============================================================================
+export const TAB = {
+  DASHBOARD: 'dashboard',
+  ANALYZE: 'analyze',
+  SYNC: 'sync',
+  TRANSLATE: 'translate',
+  SEARCH: 'search',
+  RECOGNIZE: 'recognize',
+  PLAYER: 'player',
+  SETTINGS: 'settings',
+} as const;
+export type TabId = typeof TAB[keyof typeof TAB];
+
+// ============================================================================
 // API Configuration
 // ============================================================================
 /**

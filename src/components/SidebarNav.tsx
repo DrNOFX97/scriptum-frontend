@@ -10,21 +10,22 @@ import {
   Settings,
   MonitorPlay,
 } from "lucide-react";
+import { TAB, type TabId } from "@/lib/constants";
 
 interface SidebarNavProps {
-  activeTab: string;
-  onTabChange: (tab: string) => void;
+  activeTab: TabId;
+  onTabChange: (tab: TabId) => void;
 }
 
 const navItems = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "analyze", label: "Análise de Vídeo", icon: FileVideo },
-  { id: "sync", label: "Sincronização", icon: RefreshCw },
-  { id: "translate", label: "Tradução", icon: Languages },
-  { id: "search", label: "Pesquisa de Legendas", icon: Search },
-  { id: "recognize", label: "Reconhecimento", icon: Film },
-  { id: "player", label: "Leitor de Vídeo", icon: MonitorPlay },
-];
+  { id: TAB.DASHBOARD, label: "Dashboard", icon: LayoutDashboard },
+  { id: TAB.ANALYZE, label: "Análise de Vídeo", icon: FileVideo },
+  { id: TAB.SYNC, label: "Sincronização", icon: RefreshCw },
+  { id: TAB.TRANSLATE, label: "Tradução", icon: Languages },
+  { id: TAB.SEARCH, label: "Pesquisa de Legendas", icon: Search },
+  { id: TAB.RECOGNIZE, label: "Reconhecimento", icon: Film },
+  { id: TAB.PLAYER, label: "Leitor de Vídeo", icon: MonitorPlay },
+] as const;
 
 const SidebarNav = ({ activeTab, onTabChange }: SidebarNavProps) => {
   return (
@@ -68,15 +69,15 @@ const SidebarNav = ({ activeTab, onTabChange }: SidebarNavProps) => {
       {/* Settings Button */}
       <div className="px-3 pb-3 border-t border-border pt-3">
         <button
-          onClick={() => onTabChange('settings')}
+          onClick={() => onTabChange(TAB.SETTINGS)}
           className={cn(
             "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
-            activeTab === 'settings'
+            activeTab === TAB.SETTINGS
               ? "bg-accent text-accent-foreground glow-gold"
               : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
           )}
         >
-          <Settings className={cn("h-4 w-4", activeTab === 'settings' && "text-primary")} />
+          <Settings className={cn("h-4 w-4", activeTab === TAB.SETTINGS && "text-primary")} />
           Configurações
         </button>
       </div>
@@ -85,7 +86,7 @@ const SidebarNav = ({ activeTab, onTabChange }: SidebarNavProps) => {
       <div className="border-t border-border px-6 py-4">
         <div className="flex items-center gap-2">
           <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
-          <span className="text-xs text-muted-foreground font-mono">v2.1 Refactored</span>
+          <span className="text-xs text-muted-foreground font-mono">v2.5 Refactored</span>
         </div>
       </div>
     </aside>

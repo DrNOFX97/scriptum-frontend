@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useState, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Languages, Upload, FileText, Download, CheckCircle2, AlertCircle, Search, Film, Zap, Clock, Sparkles, Play, PartyPopper } from "lucide-react";
+import { motion } from "framer-motion";
+import { Languages, Upload, FileText, Download, CheckCircle2, AlertCircle, Search, Film, Sparkles, Play, PartyPopper } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,10 @@ import { useNavigation } from "@/contexts/NavigationContext";
 import useFileUpload from "@/hooks/useFileUpload";
 import { SubtitleQualityCheck } from "@/components/SubtitleQualityCheck";
 
-import { API_BASE } from "@/lib/constants";
+import { TAB, API_BASE } from "@/lib/constants";
+import api from "@/lib/api";
+import { downloadBlob, downloadUrl } from "@/lib/utils";
+import { TranslationProgress } from "./TranslationProgress";
 
 interface TranslateResponse {
   success: boolean;
@@ -139,36 +142,20 @@ const TranslationPanel = () => {
 
   const validateTranslation = async (jobId: string) => {
     try {
-      // Download translated file
-      const response = await fetch(`${API_BASE}/translate-download/${jobId}`);
-      if (!response.ok) {
-        throw new Error('Falha ao descarregar ficheiro traduzido');
-      }
-
-      const blob = await response.blob();
+      const blob = await api.downloadTranslation(jobId);
       const content = await blob.text();
-
-      // Store original content for corrections
       setOriginalSubtitleContent(content);
 
-      // Validate
-      const formData = new FormData();
-      formData.append('subtitle', blob);
+      const validationResponse = await api.validateSubtitles(blob);
 
-      const validationResponse = await fetch(`${API_BASE}/validate-subtitles`, {
-        method: 'POST',
-        body: formData
-      });
+      if (validationResponse.success && (validationResponse.data as any)?.validation) {
+        const validation = (validationResponse.data as any).validation;
+        setValidationResults(validation);
 
-      const validationData = await validationResponse.json();
-
-      if (validationData.success && validationData.validation) {
-        setValidationResults(validationData.validation);
-
-        if (validationData.validation.has_problems) {
+        if (validation.has_problems) {
           toast({
             title: "Problemas detetados",
-            description: `${validationData.validation.problems.length} problema(s) na tradução. Reveja antes de usar.`,
+            description: `${validation.problems.length} problema(s) na tradução. Reveja antes de usar.`,
             variant: "destructive"
           });
         } else {
@@ -193,10 +180,10 @@ const TranslationPanel = () => {
     // Poll every 500ms
     pollingIntervalRef.current = setInterval(async () => {
       try {
-        const response = await fetch(`${API_BASE}/translate-status/${jobId}`);
-        const data = await response.json();
+        const response = await api.getTranslationStatus(jobId);
+        const data = response.data as any;
 
-        if (data.success && data.progress) {
+        if (response.success && data?.progress) {
           setTranslationProgress(data.progress);
 
           // Stop polling if completed or error
@@ -258,16 +245,11 @@ const TranslationPanel = () => {
     try {
       console.log('🎬 Tentando reconhecer filme do nome do ficheiro:', filename);
 
-      const response = await fetch(`${API_BASE}/recognize-movie`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename }),
-      });
-
-      const data = await response.json();
+      const response = await api.recognizeMovie(filename);
+      const data = response.data as any;
       console.log('📦 Resposta TMDB:', data);
 
-      if (data.success && data.movie) {
+      if (response.success && data?.movie) {
         console.log('✅ Filme reconhecido:', data.movie.title);
         setMovieInfo(data.movie);
 
@@ -407,10 +389,10 @@ const TranslationPanel = () => {
 
   const downloadTranslated = () => {
     if (translatedData?.job_id) {
-      const link = document.createElement('a');
-      link.href = `${API_BASE}/translate-download/${translatedData.job_id}`;
-      link.download = translatedData.output_filename || 'translated.srt';
-      link.click();
+      downloadUrl(
+        `${API_BASE}/translate-download/${translatedData.job_id}`,
+        translatedData.output_filename || 'translated.srt'
+      );
     }
   };
 
@@ -418,14 +400,7 @@ const TranslationPanel = () => {
     if (!translatedData?.job_id) return;
 
     try {
-      // Download the translated file
-      const response = await fetch(`${API_BASE}/translate-download/${translatedData.job_id}`);
-
-      if (!response.ok) {
-        throw new Error('Falha ao carregar ficheiro traduzido');
-      }
-
-      const blob = await response.blob();
+      const blob = await api.downloadTranslation(translatedData.job_id);
       const text = await blob.text();
       const filename = translatedData.output_filename || 'translated.srt';
       const file = new File([blob], filename, { type: 'text/plain' });
@@ -459,15 +434,8 @@ const TranslationPanel = () => {
 
     // Then navigate to sync
     setTimeout(() => {
-      navigateToTab('sync');
+      navigateToTab(TAB.SYNC);
     }, 500);
-  };
-
-  const formatTime = (seconds: number): string => {
-    if (seconds < 60) return `${seconds}s`;
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}m ${secs}s`;
   };
 
   const handleFixProblem = (index: number, newText: string) => {
@@ -509,14 +477,9 @@ const TranslationPanel = () => {
 
       const finalContent = correctedEntries.join('\n\n');
 
-      // Download
       const blob = new Blob([finalContent], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = translatedData?.output_filename?.replace('.srt', '_corrigido.srt') || 'corrected.srt';
-      link.click();
-      URL.revokeObjectURL(url);
+      const filename = translatedData?.output_filename?.replace('.srt', '_corrigido.srt') || 'corrected.srt';
+      downloadBlob(blob, filename);
 
       toast({
         title: "Download concluído",
@@ -559,25 +522,17 @@ const TranslationPanel = () => {
         return;
       }
 
-      // Send to backend for detection
-      const formData = new FormData();
-      formData.append('subtitle', file);
+      const response = await api.detectLanguage(file);
+      const data = response.data as any;
 
-      const response = await fetch(`${API_BASE}/detect-language`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      const data = await response.json();
-
-      if (data.success && data.language) {
+      if (response.success && data?.language) {
         setSourceLang(data.language);
         toast({
           title: "Idioma detectado",
           description: `Idioma de origem: ${data.language.toUpperCase()}`,
         });
       } else {
-        throw new Error(data.error || 'Falha na deteção de idioma');
+        throw new Error(response.error || 'Falha na deteção de idioma');
       }
     } catch (err) {
       toast({
@@ -849,127 +804,11 @@ const TranslationPanel = () => {
       )}
 
       {/* Translation Progress */}
-      <AnimatePresence>
-        {translationProgress && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.3 }}
-          >
-            <Card className="p-6 border-primary/20">
-              <div className="space-y-4">
-                {/* Header with percentage */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Languages className="h-5 w-5 text-primary animate-pulse" />
-                    <h3 className="font-semibold text-foreground">
-                      {translationProgress.status === 'complete' ? 'Tradução Concluída' : 'A Traduzir...'}
-                    </h3>
-                  </div>
-                  <div className="text-3xl font-bold font-mono text-primary">
-                    {translationProgress.percentage || 0}%
-                  </div>
-                </div>
-
-                {/* Progress bar */}
-                <Progress value={translationProgress.percentage || 0} className="h-3" />
-
-                {/* Stats row */}
-                <div className="grid grid-cols-3 gap-4">
-                  {/* Current/Total */}
-                  {translationProgress.total_entries && (
-                    <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground">Progresso</p>
-                      <p className="text-lg font-bold font-mono text-foreground">
-                        {translationProgress.current_entry || 0}/{translationProgress.total_entries}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Speed */}
-                  {translationProgress.speed !== undefined && (
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1">
-                        <Zap className="h-3 w-3 text-muted-foreground" />
-                        <p className="text-xs text-muted-foreground">Velocidade</p>
-                      </div>
-                      <p className="text-lg font-bold font-mono text-foreground">
-                        {translationProgress.speed.toFixed(1)}/s
-                      </p>
-                    </div>
-                  )}
-
-                  {/* ETA */}
-                  {translationProgress.eta_seconds !== undefined && translationProgress.eta_seconds > 0 && (
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3 text-muted-foreground" />
-                        <p className="text-xs text-muted-foreground">Tempo Restante</p>
-                      </div>
-                      <p className="text-lg font-bold font-mono text-foreground">
-                        {formatTime(translationProgress.eta_seconds)}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Status message */}
-                {translationProgress.message && (
-                  <p className="text-sm text-muted-foreground italic">
-                    {translationProgress.message}
-                  </p>
-                )}
-
-                {/* Recent translations stream */}
-                {translationProgress.recent_translations && translationProgress.recent_translations.length > 0 && (
-                  <div className="space-y-2 pt-2">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="h-px flex-1 bg-border" />
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                        Últimas Traduções
-                      </p>
-                      <div className="h-px flex-1 bg-border" />
-                    </div>
-                    <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
-                      {translationProgress.recent_translations.map((trans, idx) => (
-                        <motion.div
-                          key={idx}
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: idx * 0.05 }}
-                          className="rounded-lg border border-border bg-card/50 p-3 space-y-2"
-                        >
-                          <div className="flex items-start gap-2">
-                            <div className="flex-shrink-0 w-12 h-6 rounded bg-secondary/30 flex items-center justify-center">
-                              <span className="text-xs font-mono text-muted-foreground uppercase">
-                                {sourceLang}
-                              </span>
-                            </div>
-                            <p className="text-sm text-foreground/80 flex-1 leading-relaxed">
-                              {trans.original}
-                            </p>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <div className="flex-shrink-0 w-12 h-6 rounded bg-primary/20 flex items-center justify-center">
-                              <span className="text-xs font-mono text-primary uppercase">
-                                {targetLang}
-                              </span>
-                            </div>
-                            <p className="text-sm text-foreground font-medium flex-1 leading-relaxed">
-                              {trans.translated}
-                            </p>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </Card>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <TranslationProgress
+        progress={translationProgress}
+        sourceLang={sourceLang}
+        targetLang={targetLang}
+      />
 
       {/* Error Alert */}
       {error && (

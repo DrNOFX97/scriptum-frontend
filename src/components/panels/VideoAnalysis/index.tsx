@@ -16,19 +16,9 @@ import { parallelUpload } from "@/lib/parallelUpload";
 import { TmdbCard, OnlineSubtitleResults } from "@/components/shared";
 import { useOnlineSubtitleSearch } from "@/hooks/useOnlineSubtitleSearch";
 import { API_BASE } from "@/lib/constants";
-
-interface VideoInfo {
-  filename: string;
-  codec: string;
-  format: string;
-  resolution: string;
-  width: number;
-  height: number;
-  fps: number;
-  duration: number;
-  duration_formatted: string;
-  size_mb: number;
-}
+import api from "@/lib/api";
+import type { Movie, VideoInfo } from "@/lib/types";
+import { VideoMetadataCard } from "./VideoMetadataCard";
 
 interface AnalyzeResponse {
   success: boolean;
@@ -38,18 +28,6 @@ interface AnalyzeResponse {
   can_convert_to_mp4: boolean;
   error?: string;
 }
-
-interface Movie {
-  id: number;
-  title: string;
-  original_title: string;
-  year: string;
-  rating: number;
-  overview: string;
-  poster: string;
-  imdb_id: string | null;
-}
-
 
 // Convert SRT to VTT format
 const convertSrtToVtt = (srt: string): string => {
@@ -576,16 +554,11 @@ const VideoAnalysis = () => {
     console.log('🎬 Tentando reconhecer filme:', filename);
     setIsLoadingMovie(true);
     try {
-      const response = await fetch(`${API_BASE}/recognize-movie`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename }),
-      });
-
-      const data = await response.json();
+      const response = await api.recognizeMovie(filename);
+      const data = response.data as any;
       console.log('📦 Resposta TMDB:', data);
 
-      if (data.success && data.movie) {
+      if (response.success && data?.movie) {
         console.log('✅ Filme encontrado:', data.movie.title);
         setMovieInfo(data.movie);
       } else {
@@ -1098,85 +1071,7 @@ const VideoAnalysis = () => {
           className="space-y-4"
         >
           {/* Video + Audio Info */}
-          <Card className="p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <Info className="h-5 w-5 text-primary" />
-              <h3 className="font-semibold text-foreground">Informações do Vídeo</h3>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Film className="h-3 w-3" /> Codec Vídeo
-                </p>
-                <p className="font-mono text-sm text-foreground">
-                  {videoInfo?.codec?.toUpperCase() || 'N/A'} / {videoInfo?.format || 'N/A'}
-                </p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Clock className="h-3 w-3" /> Duração
-                </p>
-                <p className="font-mono text-sm text-foreground">{videoInfo?.duration_formatted || 'N/A'}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Layers className="h-3 w-3" /> FPS
-                </p>
-                <p className="font-mono text-sm text-foreground">
-                  {videoInfo?.fps ? videoInfo.fps.toFixed(3) : 'N/A'}
-                </p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Monitor className="h-3 w-3" /> Resolução
-                </p>
-                <p className="font-mono text-sm text-foreground">{videoInfo?.resolution || 'N/A'}</p>
-              </div>
-              {audioInfo ? (
-                <>
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Volume2 className="h-3 w-3" /> Codec Áudio
-                    </p>
-                    <p className="font-mono text-sm text-foreground flex items-center gap-2">
-                      {audioInfo.codec.toUpperCase()}
-                      {!audioInfo.isCompatible && (
-                        <span className="text-xs px-1.5 py-0.5 rounded bg-destructive/10 text-destructive font-sans">
-                          Incompatível
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Volume2 className="h-3 w-3" /> Canais / Sample Rate
-                    </p>
-                    <p className="font-mono text-sm text-foreground">
-                      {audioInfo.channels === 6 ? '5.1' : audioInfo.channels === 8 ? '7.1' : audioInfo.channels === 1 ? 'Mono' : 'Estéreo'} · {audioInfo.sampleRate}
-                    </p>
-                  </div>
-                </>
-              ) : (
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Volume2 className="h-3 w-3" /> Áudio
-                  </p>
-                  <p className="font-mono text-sm text-muted-foreground">
-                    {videoInfo.size_mb > 4000
-                      ? 'Ficheiro grande — analisado no servidor'
-                      : 'N/A'}
-                  </p>
-                </div>
-              )}
-            </div>
-            <div className="mt-4 pt-4 border-t border-border">
-              <p className="text-xs text-muted-foreground mb-2">Ficheiro</p>
-              <p className="text-sm text-foreground break-all">{videoInfo?.filename || 'N/A'}</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {videoInfo?.size_mb ? `${videoInfo.size_mb.toFixed(1)} MB` : 'N/A'}
-              </p>
-            </div>
-          </Card>
+          <VideoMetadataCard videoInfo={videoInfo} audioInfo={audioInfo} />
 
           {/* Found Subtitles */}
           {extractedSubtitles.length > 0 && (

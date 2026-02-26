@@ -315,7 +315,7 @@ const VideoPlayer = () => {
     // DASH
     if (ext === "mpd" || src?.includes(".mpd")) {
       try {
-        // @ts-ignore
+        // @ts-expect-error — dynamic CDN import, no type definitions available
         const dashjs = await import("https://cdn.dashjs.org/latest/dash.all.min.js" as string);
         const player = (window as any).dashjs?.MediaPlayer?.().create?.();
         if (player) {

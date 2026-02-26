@@ -325,6 +325,33 @@ export function parseSubtitleLanguage(languageCode: string): SubtitleInfo {
   };
 }
 
+/**
+ * Common language display names for UI selects (BCP-47 → Portuguese name).
+ */
+export const LANGUAGE_NAMES: Record<string, string> = {
+  'pt-PT': 'Português (Portugal)',
+  'pt-BR': 'Português (Brasil)',
+  'en':    'Inglês',
+  'es':    'Espanhol',
+  'it':    'Italiano',
+  'fr':    'Francês',
+  'de':    'Alemão',
+};
+
+/**
+ * Subtitle search fallback order by language (for subtitle search with automatic fallback).
+ * When no results are found in the requested language, try these in order.
+ */
+export const LANGUAGE_FALLBACK: Record<string, string[]> = {
+  'pt-PT': ['pt-BR', 'es', 'it', 'fr', 'en'],
+  'pt-BR': ['pt-PT', 'es', 'it', 'fr', 'en'],
+  'es':    ['pt-PT', 'pt-BR', 'it', 'fr', 'en'],
+  'it':    ['es', 'pt-PT', 'pt-BR', 'fr', 'en'],
+  'fr':    ['es', 'it', 'pt-PT', 'pt-BR', 'en'],
+  'en':    ['es', 'pt-PT', 'pt-BR', 'fr', 'it'],
+  'de':    ['en', 'fr', 'es'],
+};
+
 export function getSubtitleBadges(info: SubtitleInfo): string[] {
   const badges: string[] = [];
   if (info.isSDH)    badges.push('SDH');

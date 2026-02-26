@@ -1,7 +1,8 @@
 import React, { createContext, useContext, ReactNode } from 'react';
+import type { TabId } from '@/lib/constants';
 
 interface NavigationContextType {
-  navigateToTab: (tab: string) => void;
+  navigateToTab: (tab: TabId) => void;
 }
 
 const NavigationContext = createContext<NavigationContextType | undefined>(undefined);
@@ -11,7 +12,7 @@ export const NavigationProvider = ({
   onNavigate
 }: {
   children: ReactNode;
-  onNavigate: (tab: string) => void;
+  onNavigate: (tab: TabId) => void;
 }) => {
   return (
     <NavigationContext.Provider value={{ navigateToTab: onNavigate }}>
