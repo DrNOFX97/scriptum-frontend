@@ -70,9 +70,9 @@ Health Check Path: /health
 As seguintes variáveis já foram adicionadas via API:
 
 ```bash
-TMDB_API_KEY=REDACTED_TMDB_KEY
-OPENSUBTITLES_API_KEY=REDACTED_OPENSUBTITLES_KEY
-GEMINI_API_KEY=REDACTED_GEMINI_KEY
+TMDB_API_KEY=<your_tmdb_api_key>
+OPENSUBTITLES_API_KEY=<your_opensubtitles_api_key>
+GEMINI_API_KEY=<your_gemini_api_key>
 OPENSUBTITLES_USER_AGENT=Scriptum v2.5
 ```
 

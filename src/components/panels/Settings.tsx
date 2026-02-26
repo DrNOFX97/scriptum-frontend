@@ -169,7 +169,7 @@ const Settings = () => {
             <div className="relative">
               <Input
                 type={showPasswords['opensubtitles_key'] ? 'text' : 'password'}
-                placeholder="REDACTED_OPENSUBTITLES_KEY"
+                placeholder="a1b2c3d4e5f6g7h8i9j0..."
                 value={config.OPENSUBTITLES_API_KEY}
                 onChange={(e) => handleChange('OPENSUBTITLES_API_KEY', e.target.value)}
                 className="pr-10"
